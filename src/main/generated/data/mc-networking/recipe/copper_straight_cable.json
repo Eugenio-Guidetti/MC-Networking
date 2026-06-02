@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "C": "minecraft:copper_ingot",
+    "G": "minecraft:gold_nugget",
+    "H": "minecraft:honeycomb"
+  },
+  "pattern": [
+    "HGH",
+    "HCH",
+    "HCH"
+  ],
+  "result": {
+    "id": "mc-networking:copper_straight_cable"
+  }
+}

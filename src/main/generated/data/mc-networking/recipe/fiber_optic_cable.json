@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "G": "minecraft:glass_pane",
+    "H": "minecraft:honeycomb"
+  },
+  "pattern": [
+    "HGH",
+    "HGH",
+    "HGH"
+  ],
+  "result": {
+    "id": "mc-networking:fiber_optic_cable"
+  }
+}

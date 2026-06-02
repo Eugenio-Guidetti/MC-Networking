@@ -1,0 +1,13 @@
+{
+  "block.mc-networking.host_block": "Host",
+  "item.mc-networking.copper_crossover_cable": "Copper Crossover Cable",
+  "item.mc-networking.copper_straight_cable": "Copper Straight Cable",
+  "item.mc-networking.fiber_optic_cable": "Fiber Optic Cable",
+  "itemGroup.mc-networking.cables": "MCNetworking: Cables",
+  "itemGroup.mc-networking.end_devices": "MCNetworking: End Devices",
+  "itemGroup.mc-networking.network_devices": "MCNetworking: Network Devices",
+  "tooltip.mcnetworking.cable": "§7§nRight click§r§7 to select the first interface",
+  "tooltip.mcnetworking.cable.pending_connection": "§7§nRight click§r§7 to select the second interface",
+  "tooltip.mcnetworking.cable.pending_connection.cancel": "§7§nShift-Right click§r§7 to cancel connection",
+  "tooltip.mcnetworking.cable.pending_connection.first_interface": "§7First interface at §o%s, face: %s"
+}

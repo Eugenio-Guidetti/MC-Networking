@@ -1,0 +1,265 @@
+package eu.eugenioguidetti.mcnetworking.item.custom;
+
+/*
+Nome: Eugenio
+Cognome: Guidetti
+Data: 26/05/2026
+ */
+
+import eu.eugenioguidetti.mcnetworking.component.ModDataComponentTypes;
+import eu.eugenioguidetti.mcnetworking.component.PendingConnection;
+import eu.eugenioguidetti.mcnetworking.item.CableType;
+import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
+import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+
+import java.util.function.Consumer;
+
+/**
+ *
+ * @author Eugenio Guidetti
+ */
+public class CableItem extends Item
+{
+    private final CableType cableType;
+
+    public CableItem(Properties properties, CableType cableType)
+    {
+        super(properties);
+        this.cableType = cableType;
+    }
+
+    public CableItem(Properties properties)
+    {
+        super(properties);
+        this.cableType = CableType.COPPER_STRAIGHT;
+    }
+
+    @Override
+    public InteractionResult useOn(UseOnContext context)
+    {
+        Player player = context.getPlayer();
+        boolean isClientSide = context.getLevel().isClientSide();
+
+        ItemStack heldItem = context.getItemInHand();
+        PendingConnection pending = heldItem.get(ModDataComponentTypes.PENDING_CONNECTION);
+
+        BlockPos clickedPos = context.getClickedPos();
+        Direction clickedFace = context.getClickedFace();
+
+        BlockEntity targetEntity = context.getLevel().getBlockEntity(clickedPos);
+
+        if (player == null)
+        {
+            return InteractionResult.PASS;
+        }
+
+        if (player.isCrouching() && pending != null)
+        {
+            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
+
+            if (isClientSide)
+            {
+                //CustomRenderPipeline.removeWaypoint(pending.pos());
+            }
+            else
+            {
+                player.sendSystemMessage(Component.literal("Collegamento annullato."));
+            }
+            return InteractionResult.SUCCESS;
+        }
+
+
+        // Controlla se abbiamo cliccato una BlockEntity che supporta la rete
+        if (!(targetEntity instanceof NetworkReceiver receiver))
+        {
+            return InteractionResult.PASS;
+        }
+
+        // Recuperiamo l'interfaccia specifica su quella faccia
+        NetworkInterface clickedNic = receiver.getInterface(clickedFace);
+
+        if (clickedNic == null)
+        {
+            if (!isClientSide)
+            {
+                player.sendSystemMessage(Component.literal("Nessuna interfaccia su questo lato."));
+            }
+
+            return InteractionResult.FAIL;
+        }
+
+        if (clickedNic.getConnectorType() != cableType.connectorType())
+        {
+            if (!isClientSide)
+            {
+                player.sendSystemMessage(Component.literal("Questo cavo non ci entra qui."));
+            }
+
+            return InteractionResult.FAIL;
+        }
+
+        if (clickedNic.isConnected())
+        {
+            if (!isClientSide)
+            {
+                player.sendSystemMessage(Component.literal("Questa interfaccia è già collegata."));
+            }
+
+            return InteractionResult.FAIL;
+        }
+
+
+        if (pending == null)
+        {
+            // PRIMO CLIC: Inizia la connessione.
+            // Salviamo le coordinate dentro l'oggetto (ItemStack)
+            heldItem.set(ModDataComponentTypes.PENDING_CONNECTION, new PendingConnection(clickedPos, clickedFace));
+
+            if (!isClientSide)
+            {
+                player.sendSystemMessage(Component.literal("Collegamento " + cableType.name() + " iniziato in " + clickedPos.toShortString()));
+            }
+            else
+            {
+                //CustomRenderPipeline.addWaypoint(clickedPos);
+            }
+
+            return InteractionResult.SUCCESS;
+        }
+
+
+        // SECONDO CLIC: Concludi o annulla
+        BlockPos firstPos = pending.pos();
+        Direction firstFace = pending.face();
+
+        if (clickedPos.equals(firstPos))
+        {
+            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
+
+            if (!isClientSide)
+            {
+                player.sendSystemMessage(Component.literal("Collegamento annullato."));
+            }
+            else
+            {
+                //CustomRenderPipeline.removeWaypoint(firstPos);
+            }
+
+            return InteractionResult.SUCCESS;
+        }
+
+
+        BlockEntity firstEntity = context.getLevel().getBlockEntity(firstPos);
+        if (firstEntity instanceof NetworkReceiver firstReceiver)
+        {
+            NetworkInterface firstNic = firstReceiver.getInterface(firstFace);
+
+            // Qui potresti aggiungere la logica didattica (es. Host-Host richiede Crossover)
+            // if (!isConnectionValid(firstReceiver, receiver, this.cableType)) { ... }
+
+            if (!isClientSide)
+            {
+                // LOGICA SERVER: Eseguiamo il collegamento reale
+
+                if (firstNic.isConnected() || clickedNic.isConnected())
+                {
+                    player.sendSystemMessage(Component.literal("Collegamento annullato: una delle due interfacce è già stata collegata"));
+
+                    return InteractionResult.FAIL;
+                }
+
+                firstNic.connect(clickedNic.getMacAddress(), clickedPos, clickedFace, this.cableType);
+                clickedNic.connect(firstNic.getMacAddress(), firstPos, firstFace, this.cableType);
+
+                player.sendSystemMessage(Component.literal("Dispositivi collegati con " + cableType.name() + "!"));
+
+                // Diciamo ai client di aggiornarsi
+                firstReceiver.sync();
+                receiver.sync();
+
+                if (!player.isCreative())
+                {
+                    heldItem.shrink(1);
+                }
+            }
+        }
+
+        // Resettiamo l'oggetto rimuovendo il componente
+        heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
+
+        return InteractionResult.SUCCESS;
+    }
+
+    @Override
+    public InteractionResult use(Level level, Player player, InteractionHand hand)
+    {
+        ItemStack heldItem = player.getItemInHand(hand);
+        PendingConnection pending = heldItem.get(ModDataComponentTypes.PENDING_CONNECTION);
+
+        // Se il giocatore fa Shift + Clic destro nell'aria ed ha un cavo attivo, lo resetta
+        if (player.isCrouching() && pending != null)
+        {
+            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
+
+            if (level.isClientSide())
+            {
+                //CustomRenderPipeline.removeWaypoint(pending.pos());
+            }
+            else
+            {
+                player.sendSystemMessage(Component.literal("Collegamento annullato."));
+            }
+            return InteractionResult.SUCCESS;
+        }
+
+        return InteractionResult.PASS;
+        //return super.use(level, player, hand);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack itemStack,
+                                TooltipContext context,
+                                TooltipDisplay display,
+                                Consumer<Component> builder,
+                                TooltipFlag tooltipFlag)
+    {
+        PendingConnection pendingConnection = itemStack.get(ModDataComponentTypes.PENDING_CONNECTION);
+
+        if (pendingConnection == null)
+        {
+            builder.accept(Component.translatable("tooltip.mcnetworking.cable"));
+        }
+        else
+        {
+            builder.accept(Component.translatable("tooltip.mcnetworking.cable.pending_connection"));
+            builder.accept(Component.translatable("tooltip.mcnetworking.cable.pending_connection.cancel"));
+            String literal = String.format(Component
+                                                   .translatable("tooltip.mcnetworking.cable.pending_connection.first_interface")
+                                                   .getString(), pendingConnection.pos().toShortString(), pendingConnection.face());
+
+            builder.accept(Component.literal(literal));
+        }
+
+        super.appendHoverText(itemStack, context, display, builder, tooltipFlag);
+    }
+
+    // Effetto "incantato" all'item se c'è una connessione in corso
+    @Override
+    public boolean isFoil(ItemStack stack)
+    {
+        return stack.has(ModDataComponentTypes.PENDING_CONNECTION) || super.isFoil(stack);
+    }
+}

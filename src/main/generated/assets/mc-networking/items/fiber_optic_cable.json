@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "mc-networking:item/fiber_optic_cable"
+  }
+}
