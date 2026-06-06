@@ -45,6 +45,9 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
 
         // --- Blocks ---
         translationBuilder.add(ModBlocks.HOST_BLOCK, "Host");
+        translationBuilder.add(ModBlocks.HUB_BLOCK, "Hub");
+        translationBuilder.add(ModBlocks.SWITCH_BLOCK, "Switch");
+        translationBuilder.add(ModBlocks.ROUTER_BLOCK, "Router");
         //translationBuilder.add(ModBlocks., "Block name");
 
         // --- Creative mode tabs ---

@@ -14,8 +14,8 @@ import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
+import eu.eugenioguidetti.mcnetworking.Utils;
 import eu.eugenioguidetti.mcnetworking.item.CableType;
-import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
@@ -28,6 +28,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
@@ -52,8 +53,17 @@ public class CablesRenderPipeline implements ClientModInitializer
                                                                                                    "pipeline/cables_solid"))
                                                                                            .build());
 
-    // Mappa il MacAddress (A o B) al record del cavo. Questo ci permette la rimozione rapida (O(1)).
-    private static final Map<MacAddress, CableRenderState> activeCables = new ConcurrentHashMap<>();
+    // Il record thread-safe da passare alla Drawing Phase
+    public record CableRenderState(Vec3 posA, Vec3 posB, float r, float g, float b, float a, float lineWidthMult)
+    {
+    }
+
+    // Un cavo è identificato univocamente dalla porta (Blocco + Faccia) da cui parte.
+    public record CableKey(BlockPos pos, Direction face)
+    {
+    }
+
+    private static final Map<CableKey, CableRenderState> activeCables = new ConcurrentHashMap<>();
     private static final List<CableRenderState> extractedCableStates = new ArrayList<>();
 
     private static final ByteBufferBuilder ALLOCATOR = new ByteBufferBuilder(RenderType.SMALL_BUFFER_SIZE);
@@ -75,81 +85,58 @@ public class CablesRenderPipeline implements ClientModInitializer
         instance = this;
 
         clearCables();
-        //activeWaypoints.add(new BlockPos(0, 1, 0));
 
         LevelRenderEvents.END_EXTRACTION.register(this::extractCables);
         LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(this::renderAndDrawCables);
     }
 
-    // Il record thread-safe da passare alla Drawing Phase
-    public record CableRenderState(Vec3 posA, Vec3 posB, float r, float g, float b, float a, float lineWidthMult)
+    public static void addCable(@NotNull BlockPos startPos,
+                                @NotNull Direction startFace,
+                                @NotNull BlockPos targetPos,
+                                @NotNull Direction targetFace,
+                                @NotNull CableType type)
     {
-    }
+        // Generiamo la chiave usando le coordinate e la faccia di partenza
+        CableKey key = new CableKey(startPos, startFace);
 
-    public static void addCable(MacAddress macA,
-                                BlockPos blockA,
-                                Direction faceA,
-                                MacAddress macB,
-                                BlockPos blockB,
-                                Direction faceB,
-                                CableType type)
-    {
-        BlockPos first;
-        BlockPos second;
-        Direction firstFace;
-        Direction secondFace;
-
-        // Imponiamo l'ordine: First > Second
-        if (blockA.compareTo(blockB) > 0)
+        if (activeCables.containsKey(key))
         {
-            first = blockA;
-            firstFace = faceA;
-            second = blockB;
-            secondFace = faceB;
-        }
-        else
-        {
-            first = blockB;
-            firstFace = faceB;
-            second = blockA;
-            secondFace = faceA;
+            return;
         }
 
-        // Calcoliamo i centri esatti delle facce dove il cavo si innesterà
-        Vec3 vecA = new Vec3(first.getX() + 0.5 + (firstFace.getStepX() * 0.5),
-                             first.getY() + 0.5 + (firstFace.getStepY() * 0.5),
-                             first.getZ() + 0.5 + (firstFace.getStepZ() * 0.5));
+        // Calcoliamo i punti reali 3D del cavo
+        Vec3 pointA = Utils.getInterfaceCenterPoint(startPos, startFace);
+        Vec3 pointB = Utils.getInterfaceCenterPoint(targetPos, targetFace);
 
-        Vec3 vecB = new Vec3(second.getX() + 0.5 + (secondFace.getStepX() * 0.5),
-                             second.getY() + 0.5 + (secondFace.getStepY() * 0.5),
-                             second.getZ() + 0.5 + (secondFace.getStepZ() * 0.5));
-
-        //vecA = first.getCenter();
-        //vecB = second.getCenter();
-
-        // Estraiamo i colori (presupponendo i metodi nel tuo record CableType)
+        // Estraiamo il colore dal tipo di cavo
         float r = type.getRed() / 255f;
         float g = type.getGreen() / 255f;
         float b = type.getBlue() / 255f;
+        float a = 1;
+        float w = type.lineWidth();
 
-        CableRenderState state = new CableRenderState(vecA, vecB, r, g, b, 1.0f, type.lineWidth());
+        // Ordina i due punti: indipendentemente da chi chiama addCable,
+        // la coppia di punti sarà sempre nello stesso ordine.
+        boolean swap = startPos.compareTo(targetPos) > 0;
+        Vec3 renderA = swap ? pointB : pointA;
+        Vec3 renderB = swap ? pointA : pointB;
 
-        // Mappiamo ENTRAMBE le coordinate allo stesso oggetto cavo.
-        // Così, se distruggiamo l'Host in 'blockA' O in 'blockB', troveremo il cavo!
-        activeCables.put(macA, state);
-        activeCables.put(macB, state);
+        CableRenderState state = new CableRenderState(renderA, renderB, r, g, b, a, w);
+
+        // Inseriamo o aggiorniamo il cavo nella mappa
+        activeCables.put(key, state);
     }
 
-    public static void removeCable(MacAddress mac)
+    public static void removeCable(@NotNull BlockPos pos, @NotNull Direction face)
     {
-        // Troviamo il cavo associato a questo blocco
-        CableRenderState state = activeCables.get(mac);
-        if (state != null)
-        {
-            // Se troviamo il cavo, lo eliminiamo dalla mappa cercando e pulendo tutte le entry
-            // che puntano a lui (così ripuliamo anche l'altra estremità).
-            activeCables.values().removeIf(val -> val.equals(state));
-        }
+        CableKey key = new CableKey(pos, face);
+        CableRenderState state = activeCables.get(key);
+        activeCables.values().removeIf(value -> value.equals(state));
+    }
+
+    public static void removeCablesFromBlock(@NotNull BlockPos pos)
+    {
+        activeCables.keySet().removeIf(key -> key.pos().equals(pos));
     }
 
     public static void clearCables()
@@ -160,10 +147,7 @@ public class CablesRenderPipeline implements ClientModInitializer
     private void extractCables(LevelExtractionContext context)
     {
         extractedCableStates.clear();
-        // Usiamo un Set temporaneo per non estrarre due volte lo stesso cavo
-        // (visto che lo avevamo mappato 2 volte nell'HashMap)
-        Set<CableRenderState> uniqueCables = new HashSet<>(activeCables.values());
-        extractedCableStates.addAll(uniqueCables);
+        extractedCableStates.addAll(activeCables.values());
     }
 
     // :::custom-pipelines:drawing-phase
@@ -189,7 +173,6 @@ public class CablesRenderPipeline implements ClientModInitializer
         matrices.pushPose();
         matrices.translate(-camera.x, -camera.y, -camera.z);
 
-        // ATTENZIONE: Qui ora usiamo VertexFormat.Mode.QUADS! Non più LINES!
         if (this.buffer == null)
         {
             this.buffer = new BufferBuilder(ALLOCATOR, VertexFormat.Mode.QUADS, CABLES_PIPELINE.getVertexFormat());
@@ -197,12 +180,8 @@ public class CablesRenderPipeline implements ClientModInitializer
 
         Matrix4fc positionMatrix = matrices.last().pose();
 
-        // LO SPESSORE REALE DEL CAVO IN BLOCCHI (es. 0.05 = 5% di un blocco)
-        // Modifica questo valore per rendere il cavo più o meno cicciotto!
-
         for (CableRenderState cable : extractedCableStates)
         {
-
             // Colori formattati 0-255
             int r = (int) (cable.r * 255);
             int g = (int) (cable.g * 255);
@@ -397,7 +376,7 @@ public class CablesRenderPipeline implements ClientModInitializer
         try (RenderPass renderPass = RenderSystem
                 .getDevice()
                 .createCommandEncoder()
-                .createRenderPass(() -> MCNetworking.MOD_ID + " example render pipeline rendering",
+                .createRenderPass(() -> MCNetworking.MOD_ID + " cables render pipeline rendering",
                                   client.getMainRenderTarget().getColorTextureView(),
                                   OptionalInt.empty(),
                                   client.getMainRenderTarget().getDepthTextureView(),

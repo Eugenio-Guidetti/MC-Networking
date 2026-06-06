@@ -1,5 +1,8 @@
 {
   "values": [
-    "mc-networking:host_block"
+    "mc-networking:host_block",
+    "mc-networking:hub_block",
+    "mc-networking:switch_block",
+    "mc-networking:router_block"
   ]
 }

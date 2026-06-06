@@ -27,6 +27,9 @@ public class ModBlockLootTableProvider extends FabricBlockLootSubProvider
     @Override
     public void generate()
     {
-          dropSelf(ModBlocks.HOST_BLOCK);
+        dropSelf(ModBlocks.HOST_BLOCK);
+        dropSelf(ModBlocks.HUB_BLOCK);
+        dropSelf(ModBlocks.SWITCH_BLOCK);
+        dropSelf(ModBlocks.ROUTER_BLOCK);
     }
 }

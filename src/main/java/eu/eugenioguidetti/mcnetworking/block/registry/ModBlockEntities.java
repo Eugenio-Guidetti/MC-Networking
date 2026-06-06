@@ -8,6 +8,9 @@ Data: 25/05/2026
 
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
+import eu.eugenioguidetti.mcnetworking.block.entity.HubBlockEntity;
+import eu.eugenioguidetti.mcnetworking.block.entity.SwitchBlockEntity;
+import eu.eugenioguidetti.mcnetworking.block.entity.RouterBlockEntity;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -26,6 +29,17 @@ public class ModBlockEntities
                                                                                                  HostBlockEntity::new,
                                                                                                  ModBlocks.HOST_BLOCK);
 
+    public static final BlockEntityType<HubBlockEntity> HUB_BLOCK_ENTITY = registerBlockEntity("hub_block",
+                                                                                               HubBlockEntity::new,
+                                                                                               ModBlocks.HUB_BLOCK);
+
+    public static final BlockEntityType<SwitchBlockEntity> SWITCH_BLOCK_ENTITY = registerBlockEntity("switch_block",
+                                                                                                     SwitchBlockEntity::new,
+                                                                                                     ModBlocks.SWITCH_BLOCK);
+
+    public static final BlockEntityType<RouterBlockEntity> ROUTER_BLOCK_ENTITY = registerBlockEntity("router_block",
+                                                                                                     RouterBlockEntity::new,
+                                                                                                     ModBlocks.ROUTER_BLOCK);
 
     private static <T extends BlockEntity> BlockEntityType<T> registerBlockEntity(String name,
                                                                                   FabricBlockEntityTypeBuilder.Factory<? extends T> entityFactory,

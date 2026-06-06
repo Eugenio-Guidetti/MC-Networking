@@ -40,6 +40,8 @@ public class ModRecipeProvider extends FabricRecipeProvider
             @Override
             public void buildRecipes()
             {
+                // --- End devices ---
+
                 shaped(RecipeCategory.REDSTONE, ModBlocks.HOST_BLOCK)
                         .pattern("IGI")
                         .pattern("ITI")
@@ -49,6 +51,40 @@ public class ModRecipeProvider extends FabricRecipeProvider
                         .define('T', Items.REDSTONE_TORCH)
                         .unlockedBy(getHasName(Blocks.AIR), has(Blocks.AIR))
                         .save(output);
+
+                // --- Network devices ---
+
+                shaped(RecipeCategory.REDSTONE, ModBlocks.HUB_BLOCK)
+                        .pattern("IGI")
+                        .pattern("GTG")
+                        .pattern("IGI")
+                        .define('I', Items.IRON_BLOCK)
+                        .define('G', Items.GOLD_BLOCK)
+                        .define('T', Items.REDSTONE)
+                        .unlockedBy(getHasName(Blocks.AIR), has(Blocks.AIR))
+                        .save(output);
+
+                shaped(RecipeCategory.REDSTONE, ModBlocks.SWITCH_BLOCK)
+                        .pattern("IGI")
+                        .pattern("GTG")
+                        .pattern("IGI")
+                        .define('I', Items.IRON_BLOCK)
+                        .define('G', Items.GOLD_BLOCK)
+                        .define('T', Items.REDSTONE_TORCH)
+                        .unlockedBy(getHasName(Blocks.AIR), has(Blocks.AIR))
+                        .save(output);
+
+                shaped(RecipeCategory.REDSTONE, ModBlocks.ROUTER_BLOCK)
+                        .pattern("IGI")
+                        .pattern("GTG")
+                        .pattern("IGI")
+                        .define('I', Items.IRON_BLOCK)
+                        .define('G', Items.GOLD_BLOCK)
+                        .define('T', Items.REDSTONE_BLOCK)
+                        .unlockedBy(getHasName(Blocks.AIR), has(Blocks.AIR))
+                        .save(output);
+
+                // --- Cables ---
 
                 shaped(RecipeCategory.REDSTONE, ModItems.COPPER_STRAIGHT_CABLE)
                         .pattern("HGH")

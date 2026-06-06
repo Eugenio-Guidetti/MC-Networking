@@ -16,7 +16,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 
 /**
@@ -42,12 +41,12 @@ public class ModCreativeModeTabs
                                                                                      });
 
     public static final CreativeModeTab NETWORK_DEVICES_TAB = registerModCreativeModeTab("network_devices",
-                                                                                         Items.REPEATER, // Placeholder: usa un oggetto vanilla finché non crei il blocco Router
+                                                                                         ModBlocks.ROUTER_BLOCK,
                                                                                          (parameters, output) ->
                                                                                          {
-                                                                                             // output.accept(ModBlocks.ROUTER_BLOCK);
-                                                                                             // output.accept(ModBlocks.SWITCH_BLOCK);
-                                                                                             output.accept(Items.REPEATER);
+                                                                                             output.accept(ModBlocks.HUB_BLOCK);
+                                                                                             output.accept(ModBlocks.SWITCH_BLOCK);
+                                                                                             output.accept(ModBlocks.ROUTER_BLOCK);
                                                                                          });
 
     private static CreativeModeTab registerModCreativeModeTab(String name,

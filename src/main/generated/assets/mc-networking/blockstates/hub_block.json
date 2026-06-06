@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "mc-networking:block/hub_block"
+    }
+  }
+}

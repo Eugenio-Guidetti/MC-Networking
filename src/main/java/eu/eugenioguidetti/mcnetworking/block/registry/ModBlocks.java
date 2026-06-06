@@ -8,6 +8,9 @@ Data: 24/05/2026
 
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.block.custom.HostBlock;
+import eu.eugenioguidetti.mcnetworking.block.custom.HubBlock;
+import eu.eugenioguidetti.mcnetworking.block.custom.RouterBlock;
+import eu.eugenioguidetti.mcnetworking.block.custom.SwitchBlock;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -27,6 +30,15 @@ import java.util.function.Function;
 public class ModBlocks
 {
     public static final Block HOST_BLOCK = registerBlock("host_block", HostBlock::new, BlockBehaviour.Properties.of().strength(4), true);
+    public static final Block HUB_BLOCK = registerBlock("hub_block", HubBlock::new, BlockBehaviour.Properties.of().strength(4), true);
+    public static final Block SWITCH_BLOCK = registerBlock("switch_block",
+                                                           SwitchBlock::new,
+                                                           BlockBehaviour.Properties.of().strength(4),
+                                                           true);
+    public static final Block ROUTER_BLOCK = registerBlock("router_block",
+                                                           RouterBlock::new,
+                                                           BlockBehaviour.Properties.of().strength(4),
+                                                           true);
 
     private static Block registerBlock(String name,
                                        Function<BlockBehaviour.Properties, Block> blockFactory,

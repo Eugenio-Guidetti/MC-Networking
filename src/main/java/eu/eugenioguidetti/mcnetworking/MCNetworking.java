@@ -9,10 +9,6 @@ import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/*
-TODO:
- - particelle quando viene inviato un pacchetto
- */
 
 public class MCNetworking implements ModInitializer
 {

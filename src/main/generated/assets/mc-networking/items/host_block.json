@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "mc-networking:block/host_block"
+    "model": "mc-networking:item/host_block"
   }
 }

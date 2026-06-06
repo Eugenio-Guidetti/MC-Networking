@@ -30,8 +30,11 @@ public class ModModelProvider extends FabricModelProvider
     @Override
     public void generateBlockStateModels(@NonNull BlockModelGenerators blockModelGenerators)
     {
-        TexturedModel.Provider hostBlockTextureModelProvider = TexturedModel.ORIENTABLE;
-        blockModelGenerators.createHorizontallyRotatedBlock(ModBlocks.HOST_BLOCK, hostBlockTextureModelProvider);
+        blockModelGenerators.createHorizontallyRotatedBlock(ModBlocks.HOST_BLOCK, TexturedModel.ORIENTABLE);
+
+        blockModelGenerators.createTrivialBlock(ModBlocks.HUB_BLOCK, TexturedModel.CUBE_TOP_BOTTOM);
+        blockModelGenerators.createTrivialBlock(ModBlocks.SWITCH_BLOCK, TexturedModel.CUBE_TOP_BOTTOM);
+        blockModelGenerators.createTrivialBlock(ModBlocks.ROUTER_BLOCK, TexturedModel.CUBE_TOP_BOTTOM);
     }
 
     @Override
@@ -40,5 +43,12 @@ public class ModModelProvider extends FabricModelProvider
         itemModelGenerators.generateFlatItem(ModItems.COPPER_STRAIGHT_CABLE, ModelTemplates.FLAT_ITEM);
         itemModelGenerators.generateFlatItem(ModItems.COPPER_CROSSOVER_CABLE, ModelTemplates.FLAT_ITEM);
         itemModelGenerators.generateFlatItem(ModItems.FIBER_OPTIC_CABLE, ModelTemplates.FLAT_ITEM);
+
+
+        // Texture 2D per gli item dei NetworkingBlockEntity
+        itemModelGenerators.generateFlatItem(ModBlocks.HOST_BLOCK.asItem(), ModelTemplates.FLAT_ITEM);
+        itemModelGenerators.generateFlatItem(ModBlocks.HUB_BLOCK.asItem(), ModelTemplates.FLAT_ITEM);
+        itemModelGenerators.generateFlatItem(ModBlocks.SWITCH_BLOCK.asItem(), ModelTemplates.FLAT_ITEM);
+        itemModelGenerators.generateFlatItem(ModBlocks.ROUTER_BLOCK.asItem(), ModelTemplates.FLAT_ITEM);
     }
 }

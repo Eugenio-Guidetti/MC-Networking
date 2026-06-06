@@ -1,5 +1,8 @@
 {
   "block.mc-networking.host_block": "Host",
+  "block.mc-networking.hub_block": "Hub",
+  "block.mc-networking.router_block": "Router",
+  "block.mc-networking.switch_block": "Switch",
   "item.mc-networking.copper_crossover_cable": "Copper Crossover Cable",
   "item.mc-networking.copper_straight_cable": "Copper Straight Cable",
   "item.mc-networking.fiber_optic_cable": "Fiber Optic Cable",

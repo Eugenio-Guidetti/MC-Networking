@@ -6,7 +6,9 @@ Cognome: Guidetti
 Data: 25/05/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.simulation.protocol.EthernetFrame;
 import net.minecraft.core.Direction;
+import org.jetbrains.annotations.NotNull;
 
 /**
  *
@@ -15,10 +17,10 @@ import net.minecraft.core.Direction;
 public interface NetworkReceiver
 {
     /**
-     * @param packet Il pacchetto in arrivo.
-     * @param from   La direzione DA CUI è arrivato (utile per non rimandarlo indietro).
+     * @param frame Il frame in arrivo.
+     * @param from  L'interfaccia a cui è stato inviato il frame
      */
-    void receivePacket(SimPacket packet, Direction from);
+    void receiveFrame(@NotNull EthernetFrame frame, @NotNull Direction from);
 
     NetworkInterface getInterface(Direction clickedFace);
 

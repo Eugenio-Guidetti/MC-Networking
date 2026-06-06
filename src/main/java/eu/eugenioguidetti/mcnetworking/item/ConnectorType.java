@@ -6,8 +6,6 @@ Cognome: Guidetti
 Data: 26/05/2026
  */
 
-import org.jspecify.annotations.NonNull;
-
 /**
  *
  * @author Eugenio Guidetti
@@ -28,13 +26,5 @@ public record ConnectorType(String name)
             case FIBER_NAME -> FIBER;
             default -> null;
         };
-    }
-
-    @Override
-    @NonNull
-    public String toString()
-    {
-        return name;
-        //return "ConnectorType{" + "name='" + name + '\'' + '}';
     }
 }

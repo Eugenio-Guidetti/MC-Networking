@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "G": "minecraft:gold_block",
+    "I": "minecraft:iron_block",
+    "T": "minecraft:redstone_block"
+  },
+  "pattern": [
+    "IGI",
+    "GTG",
+    "IGI"
+  ],
+  "result": {
+    "id": "mc-networking:router_block"
+  }
+}

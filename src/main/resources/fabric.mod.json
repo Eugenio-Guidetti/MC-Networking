@@ -19,8 +19,7 @@
       "eu.eugenioguidetti.mcnetworking.MCNetworking"
     ],
     "client": [
-      "eu.eugenioguidetti.mcnetworking.client.rendering.CablesRenderPipeline",
-      "eu.eugenioguidetti.mcnetworking.client.rendering.CustomRenderPipeline"
+      "eu.eugenioguidetti.mcnetworking.client.rendering.CablesRenderPipeline"
     ],
     "fabric-datagen": [
       "eu.eugenioguidetti.mcnetworking.datagen.MCNetworkingDataGenerator"

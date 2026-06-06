@@ -8,17 +8,13 @@ Data: 25/05/2026
 
 import com.mojang.serialization.MapCodec;
 import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
-import eu.eugenioguidetti.mcnetworking.block.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -31,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @author Eugenio Guidetti
  */
-public class HostBlock extends BaseEntityBlock
+public class HostBlock extends NetworkingBlock
 {
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     public static final EnumProperty<Direction> HORIZONTAL_FACING = BlockStateProperties.HORIZONTAL_FACING;
@@ -71,12 +67,6 @@ public class HostBlock extends BaseEntityBlock
     }
 
     @Override
-    public RenderShape getRenderShape(BlockState state)
-    {
-        return RenderShape.MODEL;
-    }
-
-    @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, Orientation orientation, boolean movedByPiston)
     {
         super.neighborChanged(state, level, pos, block, orientation, movedByPiston);
@@ -106,18 +96,5 @@ public class HostBlock extends BaseEntityBlock
 
         // The '3' is a flag that tells Minecraft to update the block and notify clients.
         level.setBlock(pos, state.setValue(POWERED, isReceivingPower), 3);
-    }
-
-    @Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type)
-    {
-        // Registriamo il ticker solo lato Server
-        if (level.isClientSide())
-        {
-            return null;
-        }
-
-        return createTickerHelper(type, ModBlockEntities.HOST_BLOCK_ENTITY, HostBlockEntity::tick);
     }
 }

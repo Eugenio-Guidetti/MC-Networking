@@ -26,6 +26,7 @@ public class MacAddress
     public static final String MAC_SEPARATOR = ":";
 
     public static final MacAddress ALL_ZEROS = new MacAddress(new byte[]{0, 0, 0, 0, 0, 0});
+    public static final MacAddress BROADCAST = new MacAddress(new byte[]{(byte) 255, (byte) 255, (byte) 255, (byte) 255, (byte) 255, (byte) 255});
 
     public MacAddress(byte[] macAddress)
     {
@@ -54,6 +55,19 @@ public class MacAddress
         return new MacAddress(bytes);
     }
 
+    public boolean isBroadcast(MacAddress macAddress)
+    {
+        for (byte b : macAddress.macAddress)
+        {
+            if (b != (byte) 0xFF)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private byte[] convertMacToBytes(String mac)
     {
         if (mac == null)
@@ -61,8 +75,8 @@ public class MacAddress
             throw new IllegalArgumentException("Stringa MAC nulla");
         }
 
-        // Rimuove separatori comuni
-        String cleanMac = mac.replace(MAC_SEPARATOR, "").replace("-", "");
+        // Rimuove separatori
+        String cleanMac = mac.replace(MAC_SEPARATOR, "");
 
         if (cleanMac.length() != MAC_BYTES * 2)
         {
