@@ -1,4 +1,4 @@
-package eu.eugenioguidetti.mcnetworking.item;
+package eu.eugenioguidetti.mcnetworking.simulation.models.cables;
 
 /*
 Nome: Eugenio
@@ -6,6 +6,7 @@ Cognome: Guidetti
 Data: 26/05/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.item.ModItems;
 import net.minecraft.world.item.Item;
 
 /**
@@ -18,7 +19,7 @@ public record CableType(String name, int ticksDelay, ConnectorType connectorType
     private static final String COPPER_CROSSOVER_NAME = "Copper Crossover";
     private static final String FIBER_OPTIC_NAME = "Fiber Optic";
 
-    public static final CableType COPPER_STRAIGHT = new CableType(COPPER_STRAIGHT_NAME, 2, ConnectorType.RJ45, 0x000000, 0.0625f);
+    public static final CableType COPPER_STRAIGHT = new CableType(COPPER_STRAIGHT_NAME, 3, ConnectorType.RJ45, 0x000000, 0.0625f);
     public static final CableType COPPER_CROSSOVER = new CableType(COPPER_CROSSOVER_NAME, 2, ConnectorType.RJ45, 0x454545, 0.0625f);
     public static final CableType FIBER_OPTIC = new CableType(FIBER_OPTIC_NAME, 1, ConnectorType.FIBER, 0x0023F5, 0.025f);
 

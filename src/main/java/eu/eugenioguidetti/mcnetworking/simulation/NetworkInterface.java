@@ -7,10 +7,11 @@ Data: 26/05/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.Utils;
-import eu.eugenioguidetti.mcnetworking.item.CableType;
-import eu.eugenioguidetti.mcnetworking.item.ConnectorType;
+import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
-import eu.eugenioguidetti.mcnetworking.simulation.protocol.EthernetFrame;
+import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
+import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -21,6 +22,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
@@ -34,18 +36,19 @@ import java.util.Queue;
  */
 public class NetworkInterface
 {
-    private record InflightPacket(EthernetFrame frame, int ticksRemaining)
-    {
-    }
-
     // Coda di Trasmissione (Buffer)
-    private final Queue<InflightPacket> txQueue = new LinkedList<>();
+    private final Queue<EthernetFrame> txQueue = new LinkedList<>();
 
-
-    private MacAddress macAddress = MacAddress.ALL_ZEROS;
     private final BlockPos pos;
     private final Direction direction;
     private ConnectorType connectorType = ConnectorType.RJ45;
+    private float txSpeed = 0.5f;
+
+    private EthernetFrame currentTxFrame = null;
+    private int currentTxTicksRemaining = 0;
+
+    private MacAddress macAddress = MacAddress.ALL_ZEROS;
+    private Ipv4Address ipAddress = Ipv4Address.ALL_ZEROS;
 
     @Nullable
     private BlockPos connectedTargetPos = null;
@@ -54,11 +57,9 @@ public class NetworkInterface
     @Nullable
     private CableType connectedCableType = null;
 
-
     /**
      * Crea un'interfaccia con un indirizzo MAC casuale (Locally Administered, Unicast)
      */
-
     public NetworkInterface(BlockPos pos, Direction direction, ConnectorType connectorType)
     {
         this.macAddress = MacAddress.generateRandomMac();
@@ -67,7 +68,10 @@ public class NetworkInterface
         this.pos = pos.immutable();
         this.direction = direction;
         this.connectorType = connectorType;
+
+        this.ipAddress = Ipv4Address.ALL_ZEROS;
     }
+
 
     public NetworkInterface(MacAddress macAddress, BlockPos pos, Direction direction, ConnectorType connectorType)
     {
@@ -77,14 +81,90 @@ public class NetworkInterface
         this.pos = pos.immutable();
         this.direction = direction;
         this.connectorType = connectorType;
+
+        this.ipAddress = Ipv4Address.ALL_ZEROS;
+    }
+
+    /**
+     * Chiamato dall'Host/Router quando vuole inviare un pacchetto.
+     */
+    public void sendFrame(EthernetFrame frame)
+    {
+        if (!isConnected())
+        {
+            return;
+        }
+
+
+        txQueue.offer(frame);
+    }
+
+    public void tick(Level level)
+    {
+        if (!isConnected() || (txQueue.isEmpty() && currentTxFrame == null))
+        {
+            return;
+        }
+
+        // Prendo il frame da trasmettere
+        if (currentTxFrame == null)
+        {
+            currentTxFrame = txQueue.poll();
+
+            // Calcolo ritardo
+            currentTxTicksRemaining = connectedCableType.ticksDelay() + (int) (currentTxFrame.getSizeInBytes() * this.txSpeed);
+        }
+
+        // Eseguo ritardo
+        if (currentTxTicksRemaining > 0)
+        {
+            currentTxTicksRemaining--;
+
+            if (currentTxTicksRemaining % 7 == 0)
+            {
+                showParticles((ServerLevel) level);
+            }
+
+            return;
+        }
+
+        // Ritardo esaurito
+        BlockEntity target = level.getBlockEntity(this.connectedTargetPos);
+        if (target instanceof NetworkReceiver receiver)
+        {
+
+
+            // Il pacchetto entra nel blocco alle coordinate dell'interfaccia di destinazione, specifico da quale faccia arriva
+            receiver.receiveFrame(currentTxFrame, this.connectedTargetFace);
+        }
+
+        currentTxFrame = null;
+    }
+
+    private void showParticles(ServerLevel serverLevel)
+    {
+        int color = ARGB.color(255, 255, 0); // Giallo
+        Vec3 pos = Utils.getInterfaceCenterPoint(this.getPos(), this.getDirection());
+
+        pos = new Vec3(pos.x + ((pos.x - (getPos().getX() + .5f))) * .6f, pos.y + 0f, pos.z + ((pos.z - (getPos().getZ() + .5f))) * .6f);
+
+        serverLevel.sendParticles(new DustParticleOptions(color, 1.5f), // color, scale
+                                  pos.x, pos.y, pos.z, 1,  // count
+                                  .1f, // delta X
+                                  .1f, // delta Y
+                                  .1f, // delta Z
+                                  10  // speed
+        );
     }
 
 
-    // Salvataggio/caricamento dati interfaccia in NBT
-
     public void save(@NonNull ValueOutput output)
     {
-        output.putString("MacAddress", this.getMacAddress().toString());
+        if (!this.getMacAddress().equals(MacAddress.ALL_ZEROS))
+        {
+            output.putString("MacAddress", this.getMacAddress().toString());
+        }
+
         output.putString("ConnectorType", this.connectorType.name());
 
         boolean connected = isConnected();
@@ -98,7 +178,15 @@ public class NetworkInterface
             output.putString("TargetFace", this.connectedTargetFace.getName());
             output.putString("CableType", this.connectedCableType.name());
         }
+
+        if (ipAddress != null && !ipAddress.equals(Ipv4Address.ALL_ZEROS))
+        {
+            output.putString("IpAddress", this.ipAddress.toString());
+        }
     }
+
+
+    // Salvataggio/caricamento dati interfaccia in NBT
 
     public void load(@NonNull ValueInput input, Direction face)
     {
@@ -139,66 +227,12 @@ public class NetworkInterface
         {
             this.disconnect();
         }
-    }
 
-    /**
-     * Chiamato dall'Host/Router quando vuole inviare un pacchetto.
-     */
-    public void sendPacket(EthernetFrame frame)
-    {
-        if (!isConnected())
-        {
-            return;
-        }
-
-        txQueue.offer(new InflightPacket(frame, connectedCableType.ticksDelay()));
+        this.ipAddress = input.getString("IpAddress").map(Ipv4Address::new).orElse(Ipv4Address.ALL_ZEROS);
     }
 
 
-    public void tick(Level level)
-    {
-        if (!isConnected() || txQueue.isEmpty())
-        {
-            return;
-        }
-
-        // Prendo il primo pacchetto dalla coda di uscita e diminuisco i tick di ritardo con cui verrà inviato
-        InflightPacket inflight = txQueue.poll();
-        int ticksLeft = inflight.ticksRemaining() - 1;
-
-        if (ticksLeft > 0)
-        {
-            // Se c'è ancora da aspettare rimetto il pacchetto in coda
-            txQueue.offer(new InflightPacket(inflight.frame(), ticksLeft));
-            return;
-        }
-
-        // Ritardo esaurito
-        BlockEntity target = level.getBlockEntity(this.connectedTargetPos);
-        if (target instanceof NetworkReceiver receiver)
-        {
-            // Il pacchetto entra nel blocco alle coordinate dell'interfaccia di destinazione, specifico da quale faccia arriva
-
-            // Questo codice gira solo sul server
-
-            ServerLevel serverLevel = (ServerLevel) level;
-            int color = ARGB.color(255, 255, 0); // Giallo
-            Vec3 pos = Utils.getInterfaceCenterPoint(this.getPos(), this.getDirection());
-
-            serverLevel.sendParticles(new DustParticleOptions(color, 1.5f), // color, scale
-                                      pos.x, pos.y, pos.z, 1,  // count
-                                      0, // delta X
-                                      0, // delta Y
-                                      0, // delta Z
-                                      0  // speed
-            );
-
-            receiver.receiveFrame(inflight.frame(), this.connectedTargetFace);
-        }
-    }
-
-
-    public void connect(MacAddress connectedMacAddress, BlockPos targetPos, Direction targetFace, CableType cableType)
+    public void connect(BlockPos targetPos, Direction targetFace, CableType cableType)
     {
         this.connectedTargetPos = targetPos;
         this.connectedTargetFace = targetFace;
@@ -211,7 +245,6 @@ public class NetworkInterface
         this.connectedTargetFace = null;
         this.connectedCableType = null;
     }
-
 
     public boolean isConnected()
     {
@@ -237,6 +270,16 @@ public class NetworkInterface
         return direction;
     }
 
+    public ConnectorType getConnectorType()
+    {
+        return connectorType;
+    }
+
+    public MacAddress getMacAddress()
+    {
+        return macAddress;
+    }
+
     @Nullable
     public BlockPos getConnectedTargetPos()
     {
@@ -255,14 +298,14 @@ public class NetworkInterface
         return connectedCableType;
     }
 
-    public ConnectorType getConnectorType()
+    public Ipv4Address getIpAddress()
     {
-        return connectorType;
+        return ipAddress;
     }
 
-    public MacAddress getMacAddress()
+    public void setIpAddress(@NotNull Ipv4Address ipAddress)
     {
-        return macAddress;
+        this.ipAddress = ipAddress;
     }
 
     @Override

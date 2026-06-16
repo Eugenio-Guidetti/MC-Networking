@@ -6,9 +6,11 @@ Cognome: Guidetti
 Data: 25/05/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.simulation.protocol.EthernetFrame;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Map;
 
 /**
  *
@@ -22,9 +24,15 @@ public interface NetworkReceiver
      */
     void receiveFrame(@NotNull EthernetFrame frame, @NotNull Direction from);
 
-    NetworkInterface getInterface(Direction clickedFace);
+    NetworkInterface getInterface(Direction face);
+
+    Map<Direction, NetworkInterface> getNics();
 
     void disconnectAll();
 
     void sync();
+
+    String getHostname();
+
+    int getDeviceLayer();
 }

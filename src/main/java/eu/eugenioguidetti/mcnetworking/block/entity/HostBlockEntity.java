@@ -8,22 +8,22 @@ Data: 25/05/2026
 
 import eu.eugenioguidetti.mcnetworking.block.custom.HostBlock;
 import eu.eugenioguidetti.mcnetworking.block.registry.ModBlockEntities;
-import eu.eugenioguidetti.mcnetworking.item.ConnectorType;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.endDevices.EndDeviceL2Engine;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.endDevices.EndDeviceL3Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
-import eu.eugenioguidetti.mcnetworking.simulation.protocol.ApplicationPayload;
-import eu.eugenioguidetti.mcnetworking.simulation.protocol.EthernetFrame;
-import eu.eugenioguidetti.mcnetworking.simulation.protocol.Ipv4Packet;
-import eu.eugenioguidetti.mcnetworking.simulation.protocol.TcpSegment;
+import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ApplicationPayload;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.ARGB;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Map;
 
 /**
  *
@@ -31,17 +31,29 @@ import org.jetbrains.annotations.NotNull;
  */
 public class HostBlockEntity extends NetworkingBlockEntity
 {
+    private final EndDeviceL2Engine l2Engine = new EndDeviceL2Engine();
+    private final EndDeviceL3Engine l3Engine = new EndDeviceL3Engine();
+
+    @Nullable
+    private Ipv4Address dnsServer = null;
+
     public HostBlockEntity(BlockPos pos, BlockState state)
     {
         super(ModBlockEntities.HOST_BLOCK_ENTITY, pos, state);
 
-        Direction facing = state.getValue(HostBlock.HORIZONTAL_FACING);
+        this.stack.setL2Engine(l2Engine);
+        this.stack.setL3Engine(l3Engine);
 
+        l2Engine.setNetEntity(this);
+        l3Engine.setNetEntity(this);
+
+        hostname = "Host";
+
+        Direction facing = state.getValue(HostBlock.HORIZONTAL_FACING);
         nics.put(facing, new NetworkInterface(pos, facing, ConnectorType.RJ45));
     }
 
-    // Metodo chiamato dal Blocco quando sente la Redstone
-    public void triggerSendPacket()
+    public void triggerSendPacket(Ipv4Address destIp, String message)
     {
         if (this.level == null || this.level.isClientSide())
         {
@@ -75,66 +87,49 @@ public class HostBlockEntity extends NetworkingBlockEntity
                                            nic.getConnectedTargetFace(),
                                            nic.getConnectedCableType().name());
 
-            ApplicationPayload appData = new ApplicationPayload(payload);
-            TcpSegment tcp = new TcpSegment(45000, 80, appData);
-            Ipv4Packet ip = new Ipv4Packet(new Ipv4Address("192.168.1.1"), new Ipv4Address("10.0.0.1"), tcp);
-            EthernetFrame frame = new EthernetFrame(nic.getMacAddress(), MacAddress.BROADCAST, ip);
+            Ipv4Packet packet = new Ipv4Packet(nic.getIpAddress(), destIp, new ApplicationPayload(message));
 
-            nic.sendPacket(frame);
+            stack.sendPacket(packet);
+        }
+    }
+
+
+    @Override
+    public int getDeviceLayer()
+    {
+        return 7;
+    }
+
+
+    public Map<Ipv4Address, MacAddress> getArpCache()
+    {
+        return l3Engine.getArpCache();
+    }
+
+
+    // --- Salvataggio/caricamento defaultGateway e dnsServer in NBT ---
+
+    @Override
+    protected void saveAdditional(ValueOutput output)
+    {
+        super.saveAdditional(output);
+
+        if (l3Engine.getDefaultGateway() != null)
+        {
+            output.putString("DefaultGateway", l3Engine.getDefaultGateway().toString());
+        }
+        if (this.dnsServer != null)
+        {
+            output.putString("DnsServer", this.dnsServer.toString());
         }
     }
 
     @Override
-    public void receiveFrame(@NotNull EthernetFrame frame, @NotNull Direction from)
+    protected void loadAdditional(ValueInput input)
     {
-        if (this.level == null || this.level.isClientSide())
-        {
-            return;
-        }
-        NetworkInterface receivingNic = nics.get(from);
-        if (receivingNic == null || !receivingNic.isConnected())
-        {
-            return;
-        }
+        super.loadAdditional(input);
 
-        ServerLevel serverLevel = (ServerLevel) this.level;
-
-        String message = null;
-        int color;
-
-        if (frame.destMac().equals(MacAddress.BROADCAST) || frame.destMac().equals(receivingNic.getMacAddress()))
-        {
-            // Per ora alla ricezione di un frame, questo viene stampato in chat
-            message = String.format("§a[Host NIC at %s:%s, MAC: %s] Ricevuto frame!\nPayload: '%s'",
-                                    receivingNic.getPos().toShortString(),
-                                    receivingNic.getDirection(),
-                                    receivingNic.getMacAddress(),
-                                    frame.getDisplayString());
-
-            color = ARGB.color(0, 255, 0); // Verde
-        }
-        else
-        {
-            message = String.format("§c[Host NIC at %s:%s, MAC: %s] Scartato frame!\nPayload: '%s'",
-                                    receivingNic.getPos().toShortString(),
-                                    receivingNic.getDirection(),
-                                    receivingNic.getMacAddress(),
-                                    frame.getDisplayString());
-
-            color = ARGB.color(255, 0, 0); // Rosso
-        }
-
-        serverLevel.sendParticles(new DustParticleOptions(color, 1.5f), // color, scale
-                                  this.getBlockPos().getX() + 0.5,
-                                  this.getBlockPos().getY() + 1.1,
-                                  this.getBlockPos().getZ() + 0.5,
-                                  1,  // count
-                                  0.1, // delta X
-                                  0, // delta Y
-                                  0.1, // delta Z
-                                  0.1  // speed
-        );
-
-        this.level.getServer().getPlayerList().broadcastSystemMessage(Component.literal(message), false);
+        this.l3Engine.setDefaultGateway(input.getString("DefaultGateway").map(Ipv4Address::new).orElse(null));
+        this.dnsServer = input.getString("DnsServer").map(Ipv4Address::new).orElse(null);
     }
 }

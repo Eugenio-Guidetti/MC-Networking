@@ -8,7 +8,7 @@
     "Eugenio Guidetti"
   ],
   "contact": {
-    "homepage": "https://www.eugenioguidetti.eu/",
+    "homepage": "https://www.eugenioguidetti.eu/progetti/mc-networking/",
     "sources": "https://github.com/Eugenio-Guidetti/MC-Networking"
   },
   "license": "MIT-License",
@@ -16,10 +16,12 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "eu.eugenioguidetti.mcnetworking.MCNetworking"
+      "eu.eugenioguidetti.mcnetworking.MCNetworking",
+      "eu.eugenioguidetti.mcnetworking.terminal.initializers.ServerTerminalPacketsInitializer"
     ],
     "client": [
-      "eu.eugenioguidetti.mcnetworking.client.rendering.CablesRenderPipeline"
+      "eu.eugenioguidetti.mcnetworking.client.rendering.CablesRenderPipeline",
+      "eu.eugenioguidetti.mcnetworking.terminal.initializers.ClientTerminalPacketsInitializer"
     ],
     "fabric-datagen": [
       "eu.eugenioguidetti.mcnetworking.datagen.MCNetworkingDataGenerator"

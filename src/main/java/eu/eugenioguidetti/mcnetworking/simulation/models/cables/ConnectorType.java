@@ -1,4 +1,4 @@
-package eu.eugenioguidetti.mcnetworking.item;
+package eu.eugenioguidetti.mcnetworking.simulation.models.cables;
 
 /*
 Nome: Eugenio

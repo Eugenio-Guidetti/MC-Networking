@@ -15,7 +15,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.Utils;
-import eu.eugenioguidetti.mcnetworking.item.CableType;
+import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
@@ -44,32 +44,19 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class CablesRenderPipeline implements ClientModInitializer
 {
-    private static CablesRenderPipeline instance;
-
     private static final RenderPipeline CABLES_PIPELINE = RenderPipelines.register(RenderPipeline
                                                                                            .builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
                                                                                            .withLocation(Identifier.fromNamespaceAndPath(
                                                                                                    MCNetworking.MOD_ID,
                                                                                                    "pipeline/cables_solid"))
                                                                                            .build());
-
-    // Il record thread-safe da passare alla Drawing Phase
-    public record CableRenderState(Vec3 posA, Vec3 posB, float r, float g, float b, float a, float lineWidthMult)
-    {
-    }
-
-    // Un cavo è identificato univocamente dalla porta (Blocco + Faccia) da cui parte.
-    public record CableKey(BlockPos pos, Direction face)
-    {
-    }
-
     private static final Map<CableKey, CableRenderState> activeCables = new ConcurrentHashMap<>();
     private static final List<CableRenderState> extractedCableStates = new ArrayList<>();
-
     private static final ByteBufferBuilder ALLOCATOR = new ByteBufferBuilder(RenderType.SMALL_BUFFER_SIZE);
     private static final Vector4f COLOR_MODULATOR = new Vector4f(1f, 1f, 1f, 1f);
     private static final Vector3f MODEL_OFFSET = new Vector3f();
     private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
+    private static CablesRenderPipeline instance;
     private BufferBuilder buffer;
     private MappableRingBuffer vertexBuffer;
 
@@ -77,17 +64,6 @@ public class CablesRenderPipeline implements ClientModInitializer
     public static CablesRenderPipeline getInstance()
     {
         return instance;
-    }
-
-    @Override
-    public void onInitializeClient()
-    {
-        instance = this;
-
-        clearCables();
-
-        LevelRenderEvents.END_EXTRACTION.register(this::extractCables);
-        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(this::renderAndDrawCables);
     }
 
     public static void addCable(@NotNull BlockPos startPos,
@@ -142,6 +118,76 @@ public class CablesRenderPipeline implements ClientModInitializer
     public static void clearCables()
     {
         activeCables.clear();
+    }
+
+    private static void draw(Minecraft client,
+                             RenderPipeline pipeline,
+                             MeshData builtBuffer,
+                             MeshData.DrawState drawParameters,
+                             GpuBuffer vertices,
+                             VertexFormat format)
+    {
+        GpuBuffer indices;
+        VertexFormat.IndexType indexType;
+
+        if (pipeline.getVertexFormatMode() == VertexFormat.Mode.QUADS)
+        {
+            // Sort the quads if there is translucency
+            builtBuffer.sortQuads(ALLOCATOR, RenderSystem.getProjectionType().vertexSorting());
+            // Upload the index buffer
+            indices = pipeline.getVertexFormat().uploadImmediateIndexBuffer(builtBuffer.indexBuffer());
+            indexType = builtBuffer.drawState().indexType();
+        }
+        else
+        {
+            // Use the general shape index buffer for non-quad draw modes
+            RenderSystem.AutoStorageIndexBuffer shapeIndexBuffer = RenderSystem.getSequentialBuffer(pipeline.getVertexFormatMode());
+            indices = shapeIndexBuffer.getBuffer(drawParameters.indexCount());
+            indexType = shapeIndexBuffer.type();
+        }
+
+        // Actually execute the draw
+        GpuBufferSlice dynamicTransforms = RenderSystem
+                .getDynamicUniforms()
+                .writeTransform(RenderSystem.getModelViewMatrix(), COLOR_MODULATOR, MODEL_OFFSET, TEXTURE_MATRIX);
+        try (RenderPass renderPass = RenderSystem
+                .getDevice()
+                .createCommandEncoder()
+                .createRenderPass(() -> MCNetworking.MOD_ID + " cables render pipeline rendering",
+                                  client.getMainRenderTarget().getColorTextureView(),
+                                  OptionalInt.empty(),
+                                  client.getMainRenderTarget().getDepthTextureView(),
+                                  OptionalDouble.empty()))
+        {
+            renderPass.setPipeline(pipeline);
+
+            RenderSystem.bindDefaultUniforms(renderPass);
+            renderPass.setUniform("DynamicTransforms", dynamicTransforms);
+
+            // Bind texture if applicable:
+            // Sampler0 is used for texture inputs in vertices
+            // renderPass.bindTexture("Sampler0", textureSetup.texure0(), textureSetup.sampler0());
+
+            renderPass.setVertexBuffer(0, vertices);
+            renderPass.setIndexBuffer(indices, indexType);
+
+            // The base vertex is the starting index when we copied the data into the vertex buffer divided by vertex size
+            //noinspection ConstantValue
+            renderPass.drawIndexed(0 / format.getVertexSize(), 0, drawParameters.indexCount(), 1);
+        }
+
+        builtBuffer.close();
+    }
+
+    @Override
+    public void onInitializeClient()
+    {
+        instance = this;
+
+        clearCables();
+
+        LevelRenderEvents.END_EXTRACTION.register(this::extractCables);
+        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(this::renderAndDrawCables);
     }
 
     private void extractCables(LevelExtractionContext context)
@@ -343,65 +389,6 @@ public class CablesRenderPipeline implements ClientModInitializer
         return this.vertexBuffer.currentBuffer();
     }
 
-    private static void draw(Minecraft client,
-                             RenderPipeline pipeline,
-                             MeshData builtBuffer,
-                             MeshData.DrawState drawParameters,
-                             GpuBuffer vertices,
-                             VertexFormat format)
-    {
-        GpuBuffer indices;
-        VertexFormat.IndexType indexType;
-
-        if (pipeline.getVertexFormatMode() == VertexFormat.Mode.QUADS)
-        {
-            // Sort the quads if there is translucency
-            builtBuffer.sortQuads(ALLOCATOR, RenderSystem.getProjectionType().vertexSorting());
-            // Upload the index buffer
-            indices = pipeline.getVertexFormat().uploadImmediateIndexBuffer(builtBuffer.indexBuffer());
-            indexType = builtBuffer.drawState().indexType();
-        }
-        else
-        {
-            // Use the general shape index buffer for non-quad draw modes
-            RenderSystem.AutoStorageIndexBuffer shapeIndexBuffer = RenderSystem.getSequentialBuffer(pipeline.getVertexFormatMode());
-            indices = shapeIndexBuffer.getBuffer(drawParameters.indexCount());
-            indexType = shapeIndexBuffer.type();
-        }
-
-        // Actually execute the draw
-        GpuBufferSlice dynamicTransforms = RenderSystem
-                .getDynamicUniforms()
-                .writeTransform(RenderSystem.getModelViewMatrix(), COLOR_MODULATOR, MODEL_OFFSET, TEXTURE_MATRIX);
-        try (RenderPass renderPass = RenderSystem
-                .getDevice()
-                .createCommandEncoder()
-                .createRenderPass(() -> MCNetworking.MOD_ID + " cables render pipeline rendering",
-                                  client.getMainRenderTarget().getColorTextureView(),
-                                  OptionalInt.empty(),
-                                  client.getMainRenderTarget().getDepthTextureView(),
-                                  OptionalDouble.empty()))
-        {
-            renderPass.setPipeline(pipeline);
-
-            RenderSystem.bindDefaultUniforms(renderPass);
-            renderPass.setUniform("DynamicTransforms", dynamicTransforms);
-
-            // Bind texture if applicable:
-            // Sampler0 is used for texture inputs in vertices
-            // renderPass.bindTexture("Sampler0", textureSetup.texure0(), textureSetup.sampler0());
-
-            renderPass.setVertexBuffer(0, vertices);
-            renderPass.setIndexBuffer(indices, indexType);
-
-            // The base vertex is the starting index when we copied the data into the vertex buffer divided by vertex size
-            //noinspection ConstantValue
-            renderPass.drawIndexed(0 / format.getVertexSize(), 0, drawParameters.indexCount(), 1);
-        }
-
-        builtBuffer.close();
-    }
-
     public void close()
     {
         ALLOCATOR.close();
@@ -411,5 +398,15 @@ public class CablesRenderPipeline implements ClientModInitializer
             this.vertexBuffer.close();
             this.vertexBuffer = null;
         }
+    }
+
+    // Il record thread-safe da passare alla Drawing Phase
+    public record CableRenderState(Vec3 posA, Vec3 posB, float r, float g, float b, float a, float lineWidthMult)
+    {
+    }
+
+    // Un cavo è identificato univocamente dalla porta (Blocco + Faccia) da cui parte.
+    public record CableKey(BlockPos pos, Direction face)
+    {
     }
 }

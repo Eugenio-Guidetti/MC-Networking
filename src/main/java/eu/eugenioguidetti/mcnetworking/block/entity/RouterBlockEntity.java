@@ -7,12 +7,9 @@ Data: 03/06/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.block.registry.ModBlockEntities;
-import eu.eugenioguidetti.mcnetworking.simulation.protocol.EthernetFrame;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.networkDevices.RoutingL3Engine;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.NotNull;
-import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -24,12 +21,14 @@ public class RouterBlockEntity extends NetworkingBlockEntity
     {
         super(ModBlockEntities.ROUTER_BLOCK_ENTITY, pos, blockState);
 
+        this.stack.setL3Engine(new RoutingL3Engine());
 
+        hostname = "Router";
     }
 
     @Override
-    public void receiveFrame(@NotNull EthernetFrame frame, @NonNull Direction from)
+    public int getDeviceLayer()
     {
-
+        return 3;
     }
 }

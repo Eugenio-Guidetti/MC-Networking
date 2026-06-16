@@ -7,17 +7,14 @@ Data: 03/06/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.block.registry.ModBlockEntities;
-import eu.eugenioguidetti.mcnetworking.item.ConnectorType;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.networkDevices.SwitchingL2Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
-import eu.eugenioguidetti.mcnetworking.simulation.protocol.EthernetFrame;
+import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.NotNull;
-import org.jspecify.annotations.NonNull;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -26,12 +23,15 @@ import java.util.Map;
  */
 public class SwitchBlockEntity extends NetworkingBlockEntity
 {
-    private Map<MacAddress, Direction> switchingTable = new HashMap<>();
-
+    private final SwitchingL2Engine l2Engine = new SwitchingL2Engine();
 
     public SwitchBlockEntity(BlockPos pos, BlockState blockState)
     {
         super(ModBlockEntities.SWITCH_BLOCK_ENTITY, pos, blockState);
+
+        this.stack.setL2Engine(l2Engine);
+
+        hostname = "Switch";
 
         nics.put(Direction.NORTH, new NetworkInterface(pos, Direction.NORTH, ConnectorType.RJ45));
         nics.put(Direction.SOUTH, new NetworkInterface(pos, Direction.SOUTH, ConnectorType.RJ45));
@@ -40,46 +40,13 @@ public class SwitchBlockEntity extends NetworkingBlockEntity
     }
 
     @Override
-    public void receiveFrame(@NotNull EthernetFrame frame, @NonNull Direction from)
+    public int getDeviceLayer()
     {
-        if (this.level == null || this.level.isClientSide())
-        {
-            return;
-        }
+        return 2;
+    }
 
-        NetworkInterface receivingNic = nics.get(from);
-
-        // Evito di inserire nella switching table indirizzi MAC vuoti o di broadcast (non dovrebbe capitare)
-        if (!frame.sourceMac().equals(MacAddress.ALL_ZEROS) && !frame.sourceMac().equals(MacAddress.BROADCAST))
-        {
-            // Aggiunta indirizzi MAC (lo switch "impara" la rete)
-            switchingTable.put(frame.sourceMac(), from);
-        }
-
-        if (frame.destMac().equals(receivingNic.getMacAddress()))
-        {
-            // Pacchetto rivolto allo switch, per ora non fare nulla (considero solo switch L2)
-
-            return;
-        }
-
-        if (switchingTable.containsKey(frame.destMac()))
-        {
-            NetworkInterface sendingNic = nics.get(switchingTable.get(frame.destMac()));
-
-            if (sendingNic.equals(receivingNic))
-            {
-                // Droppo il frame
-
-                return;
-            }
-
-            sendingNic.sendPacket(frame);
-
-            return;
-        }
-
-        // Lo switch non sa dove inoltrare il frame
-        floodFrame(frame, from);
+    public Map<MacAddress, Direction> getSwitchingTable()
+    {
+        return this.l2Engine.getSwitchingTable();
     }
 }

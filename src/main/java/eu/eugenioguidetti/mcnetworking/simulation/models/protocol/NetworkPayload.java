@@ -1,4 +1,4 @@
-package eu.eugenioguidetti.mcnetworking.simulation.protocol;
+package eu.eugenioguidetti.mcnetworking.simulation.models.protocol;
 
 /*
 Nome: Eugenio
@@ -13,5 +13,6 @@ Data: 02/06/2026
 public interface NetworkPayload
 {
     String getDisplayString();
+
     int getSizeInBytes();
 }

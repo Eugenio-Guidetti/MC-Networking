@@ -8,9 +8,9 @@ Data: 26/05/2026
 
 import eu.eugenioguidetti.mcnetworking.component.ModDataComponentTypes;
 import eu.eugenioguidetti.mcnetworking.component.PendingConnection;
-import eu.eugenioguidetti.mcnetworking.item.CableType;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
+import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -137,6 +137,9 @@ public class CableItem extends Item
 
         NetworkInterface firstNic = firstReceiver.getInterface(firstFace);
 
+        // TODO: aggiungere logica didattica (es. Host-Host richiede Crossover)
+        // if (!isConnectionValid(firstReceiver, receiver, this.cableType)) { ... }
+
         if (firstNic.isConnected() || clickedNic.isConnected())
         {
             player.sendSystemMessage(Component.literal("Collegamento annullato: una delle due interfacce è già stata collegata"));
@@ -144,8 +147,8 @@ public class CableItem extends Item
             return InteractionResult.FAIL;
         }
 
-        firstNic.connect(clickedNic.getMacAddress(), clickedPos, clickedFace, this.cableType);
-        clickedNic.connect(firstNic.getMacAddress(), firstPos, firstFace, this.cableType);
+        firstNic.connect(clickedPos, clickedFace, this.cableType);
+        clickedNic.connect(firstPos, firstFace, this.cableType);
 
 
         firstReceiver.sync();

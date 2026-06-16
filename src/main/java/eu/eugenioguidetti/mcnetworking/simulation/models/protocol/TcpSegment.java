@@ -1,4 +1,4 @@
-package eu.eugenioguidetti.mcnetworking.simulation.protocol;
+package eu.eugenioguidetti.mcnetworking.simulation.models.protocol;
 
 /*
 Nome: Eugenio
@@ -25,5 +25,4 @@ public record TcpSegment(int sourcePort, int destPort, NetworkPayload payload) i
     {
         return TCP_HEADER_LENGTH + payload.getSizeInBytes();
     }
-
 }

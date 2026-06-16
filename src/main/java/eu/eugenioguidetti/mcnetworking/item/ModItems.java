@@ -8,6 +8,7 @@ Data: 24/05/2026
 
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.item.custom.CableItem;
+import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
