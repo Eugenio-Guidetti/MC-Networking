@@ -40,6 +40,6 @@ public record ArpPayload(MacAddress senderMac, Ipv4Address senderIp, MacAddress 
     @Override
     public int getSizeInBytes()
     {
-        return 6 + 4 + 6 + 4 + 4;
+        return 4 + 6 + 4 + 6 + 4 + 4;
     }
 }

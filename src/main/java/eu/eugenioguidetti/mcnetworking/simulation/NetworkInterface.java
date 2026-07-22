@@ -36,9 +36,12 @@ import java.util.Queue;
  */
 public class NetworkInterface
 {
+    public static final String LOOPBACK_NAME = "lo";
+
     // Coda di Trasmissione (Buffer)
     private final Queue<EthernetFrame> txQueue = new LinkedList<>();
 
+    private final String name;
     private final BlockPos pos;
     private final Direction direction;
     private ConnectorType connectorType = ConnectorType.RJ45;
@@ -53,6 +56,8 @@ public class NetworkInterface
     @Nullable
     private BlockPos connectedTargetPos = null;
     @Nullable
+    private String connectedTargetName = null;
+    @Nullable
     private Direction connectedTargetFace = null;
     @Nullable
     private CableType connectedCableType = null;
@@ -60,25 +65,35 @@ public class NetworkInterface
     /**
      * Crea un'interfaccia con un indirizzo MAC casuale (Locally Administered, Unicast)
      */
-    public NetworkInterface(BlockPos pos, Direction direction, ConnectorType connectorType)
+    public NetworkInterface(@NotNull String name, @NotNull BlockPos pos, Direction direction, ConnectorType connectorType)
     {
         this.macAddress = MacAddress.generateRandomMac();
 
-        // ! IMPORTANTE ! usare .immutable() senno si sminchia tutto
-        this.pos = pos.immutable();
+        this.name = name.toLowerCase();
+        this.pos = pos.immutable(); // ! IMPORTANTE ! Usare .immutable() senno si sminchia tutto
         this.direction = direction;
         this.connectorType = connectorType;
 
         this.ipAddress = Ipv4Address.ALL_ZEROS;
     }
 
-
-    public NetworkInterface(MacAddress macAddress, BlockPos pos, Direction direction, ConnectorType connectorType)
+    public NetworkInterface(MacAddress macAddress,
+                            @NotNull String name,
+                            @NotNull BlockPos pos,
+                            Direction direction,
+                            ConnectorType connectorType)
     {
-        this.macAddress = macAddress;
+        if (macAddress == null || macAddress.equals(MacAddress.ALL_ZEROS))
+        {
+            this.macAddress = MacAddress.generateRandomMac();
+        }
+        else
+        {
+            this.macAddress = macAddress;
+        }
 
-        // ! IMPORTANTE ! usare .immutable() senno si sminchia tutto
-        this.pos = pos.immutable();
+        this.name = name.toLowerCase();
+        this.pos = pos.immutable(); // ! IMPORTANTE ! usare .immutable() senno si sminchia tutto
         this.direction = direction;
         this.connectorType = connectorType;
 
@@ -94,7 +109,6 @@ public class NetworkInterface
         {
             return;
         }
-
 
         txQueue.offer(frame);
     }
@@ -135,7 +149,7 @@ public class NetworkInterface
 
 
             // Il pacchetto entra nel blocco alle coordinate dell'interfaccia di destinazione, specifico da quale faccia arriva
-            receiver.receiveFrame(currentTxFrame, this.connectedTargetFace);
+            receiver.receiveFrame(currentTxFrame, this.connectedTargetName);
         }
 
         currentTxFrame = null;
@@ -175,6 +189,7 @@ public class NetworkInterface
             output.putInt("TargetX", this.connectedTargetPos.getX());
             output.putInt("TargetY", this.connectedTargetPos.getY());
             output.putInt("TargetZ", this.connectedTargetPos.getZ());
+            output.putString("TargetName", this.connectedTargetName);
             output.putString("TargetFace", this.connectedTargetFace.getName());
             output.putString("CableType", this.connectedCableType.name());
         }
@@ -188,7 +203,7 @@ public class NetworkInterface
 
     // Salvataggio/caricamento dati interfaccia in NBT
 
-    public void load(@NonNull ValueInput input, Direction face)
+    public void load(@NonNull ValueInput input)
     {
         String macStr = input.getString("MacAddress").orElse(null);
 
@@ -213,10 +228,18 @@ public class NetworkInterface
                 int ty = input.getInt("TargetY").orElseThrow();
                 int tz = input.getInt("TargetZ").orElseThrow();
                 this.connectedTargetPos = new BlockPos(tx, ty, tz);
-
+                this.connectedTargetName = input.getString("TargetName").orElseThrow();
                 // Uso toLowerCase per sicurezza: se il nome della direzione è maiuscolo non funziona
-                this.connectedTargetFace = Direction.byName(input.getString("TargetFace").orElseThrow().toLowerCase());
-                this.connectedCableType = CableType.fromName(input.getString("CableType").orElseThrow());
+                String connectedTargetFaceName = input.getString("TargetFace").orElse(null);
+                if (connectedTargetFaceName != null && !connectedTargetFaceName.isEmpty())
+                {
+                    this.connectedTargetFace = Direction.byName(connectedTargetFaceName.toLowerCase());
+                }
+                else
+                {
+                    this.connectedTargetFace = null;
+                }
+                this.connectedCableType = CableType.fromName(input.getString("CableType").orElse(null));
             }
             catch (Exception e)
             {
@@ -231,33 +254,42 @@ public class NetworkInterface
         this.ipAddress = input.getString("IpAddress").map(Ipv4Address::new).orElse(Ipv4Address.ALL_ZEROS);
     }
 
-
-    public void connect(BlockPos targetPos, Direction targetFace, CableType cableType)
+    public boolean isLoopback()
     {
+        return this.name.equals(LOOPBACK_NAME);
+    }
+
+    public void connect(BlockPos targetPos, String targetName, @Nullable Direction connectedTargetFace, @Nullable CableType cableType)
+    {
+        if (isLoopback())
+        {
+            throw new IllegalStateException("Non puoi connettere fisicamente un'interfaccia di loopback");
+        }
+
         this.connectedTargetPos = targetPos;
-        this.connectedTargetFace = targetFace;
+        this.connectedTargetName = targetName;
+        this.connectedTargetFace = connectedTargetFace;
         this.connectedCableType = cableType;
     }
 
     public void disconnect()
     {
         this.connectedTargetPos = null;
+        this.connectedTargetName = null;
         this.connectedTargetFace = null;
         this.connectedCableType = null;
     }
 
     public boolean isConnected()
     {
-        boolean disconnected = connectedTargetPos == null || connectedTargetFace == null || connectedCableType == null;
+        boolean disconnected = connectedTargetPos == null || connectedTargetName == null;
+        return !disconnected || isLoopback();
+    }
 
-        if (disconnected)
-        {
-            connectedTargetPos = null;
-            connectedTargetFace = null;
-            connectedCableType = null;
-        }
 
-        return !disconnected;
+    public String getName()
+    {
+        return name;
     }
 
     public BlockPos getPos()
@@ -287,7 +319,12 @@ public class NetworkInterface
     }
 
     @Nullable
-    public Direction getConnectedTargetFace()
+    public String getConnectedTargetName()
+    {
+        return connectedTargetName;
+    }
+
+    public @Nullable Direction getConnectedTargetFace()
     {
         return connectedTargetFace;
     }
@@ -333,7 +370,7 @@ public class NetworkInterface
 
         if (isConnected())
         {
-            s += ", connectedTargetPos=" + connectedTargetPos.toShortString() + ", connectedTargetFace=" + connectedTargetFace + ", connectedCableType=" + connectedCableType;
+            s += ", connectedTargetPos=" + connectedTargetPos.toShortString() + ", connectedTargetFace=" + connectedTargetName + ", connectedCableType=" + connectedCableType;
         }
 
         s += '}';

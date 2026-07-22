@@ -9,8 +9,8 @@ Data: 25/05/2026
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
 import eu.eugenioguidetti.mcnetworking.block.entity.HubBlockEntity;
-import eu.eugenioguidetti.mcnetworking.block.entity.SwitchBlockEntity;
 import eu.eugenioguidetti.mcnetworking.block.entity.RouterBlockEntity;
+import eu.eugenioguidetti.mcnetworking.block.entity.SwitchBlockEntity;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;

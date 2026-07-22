@@ -25,20 +25,18 @@ public class ClientTerminalPacketsInitializer implements ClientModInitializer
     @Override
     public void onInitializeClient()
     {
-        // Registriamo cosa fa il CLIENT quando riceve il pacchetto dal server
         ClientPlayNetworking.registerGlobalReceiver(TerminalOutputS2CPacket.ID, (payload, context) ->
         {
 
-            // Come per il server, spostiamo l'esecuzione sul thread principale del Client
             context.client().execute(() ->
                                      {
                                          Minecraft client = Minecraft.getInstance();
 
                                          // Controlliamo se il giocatore ha aperto la schermata giusta
-                                         if (client.screen instanceof TerminalScreen terminalScreen)
+                                         if (client.gui.screen() instanceof TerminalScreen terminalScreen)
                                          {
                                              // Aggiungiamo l'output ricevuto dal server allo storico della UI
-                                             terminalScreen.addOutput(payload.output(), payload.prompt());
+                                             terminalScreen.addOutput(payload.output(), payload.prompt(), payload.globalPos());
                                          }
                                      });
         });
@@ -48,12 +46,10 @@ public class ClientTerminalPacketsInitializer implements ClientModInitializer
         {
             context.client().execute(() ->
                                      {
-                                         Minecraft
-                                                 .getInstance()
-                                                 .setScreen(new TerminalScreen(context.player().level(),
-                                                                               payload.pos(),
-                                                                               payload.history(),
-                                                                               payload.currentPrompt()));
+                                         Minecraft.getInstance().gui.setScreen(new TerminalScreen(context.player().level(),
+                                                                                                  payload.pos(),
+                                                                                                  payload.history(),
+                                                                                                  payload.currentPrompt()));
                                      });
         });
 

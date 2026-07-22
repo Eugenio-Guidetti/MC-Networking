@@ -27,8 +27,14 @@ public class HelpCommand implements TerminalCommand
     }
 
     @Override
-    public String execute(ConsoleSession session, String[] args)
+    public void execute(ConsoleSession session, String[] args)
     {
+        if (args.length > 1)
+        {
+            session.sendOutput(showCommandDescription(session, args[1]));
+            return;
+        }
+
         List<String> commands = new ArrayList<>();
 
         for (Map.Entry<String, TerminalCommand> entry : entries)
@@ -50,7 +56,20 @@ public class HelpCommand implements TerminalCommand
             sb.append(commands.get(i));
         }
 
-        return sb.toString();
+        session.sendOutput(sb.toString());
+    }
+
+    private String showCommandDescription(ConsoleSession session, String commandName)
+    {
+        for (Map.Entry<String, TerminalCommand> entry : entries)
+        {
+            if (entry.getKey().equals(commandName) && entry.getValue().canRunCommand(session))
+            {
+                return entry.getValue().getDescription(session);
+            }
+        }
+
+        return "Comando non trovato: " + commandName;
     }
 
     @Override
@@ -60,7 +79,7 @@ public class HelpCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription()
+    public String getDescription(ConsoleSession session)
     {
         return "Mostra i comandi disponibili";
     }

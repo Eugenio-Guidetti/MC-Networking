@@ -9,6 +9,7 @@ Data: 25/05/2026
 import com.mojang.serialization.MapCodec;
 import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ApplicationPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -93,12 +94,21 @@ public class HostBlock extends NetworkingBlock
             {
                 for (int i = 10; i < 26; i++)
                 {
-                    for (int j = 0; j < 4; j++)
-                    {
-                        hostEntity.triggerSendPacket(new Ipv4Address("192.168.1." + i), "PING from: " + hostEntity.getHostname());
-                        //hostEntity.triggerSendPacket(new Ipv4Address("127.0.0.1"), "PING from: " + hostEntity.getHostname());
-                    }
+                    hostEntity.triggerSendPacket(new Ipv4Address("192.168.1." + i),
+                                                 new ApplicationPayload("PING from: " + hostEntity.getHostname()));
+
+                    // hostEntity.triggerSendPacket(new Ipv4Address("127.0.0.1"), new ApplicationPayload("PING from: " + hostEntity.getHostname()));
+
                 }
+
+                hostEntity.triggerSendPacket(new Ipv4Address("192.168.1.1"),
+                                             new ApplicationPayload("PING from: " + hostEntity.getHostname()));
+                hostEntity.triggerSendPacket(new Ipv4Address("192.168.2.1"),
+                                             new ApplicationPayload("PING from: " + hostEntity.getHostname()));
+                hostEntity.triggerSendPacket(new Ipv4Address("192.168.2.11"),
+                                             new ApplicationPayload("PING from: " + hostEntity.getHostname()));
+                hostEntity.triggerSendPacket(new Ipv4Address("192.168.2.12"),
+                                             new ApplicationPayload("PING from: " + hostEntity.getHostname()));
             }
         }
 

@@ -11,6 +11,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
 import eu.eugenioguidetti.mcnetworking.terminal.packet.OpenTerminalS2CPacket;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -69,15 +70,15 @@ public abstract class NetworkingBlock extends BaseEntityBlock
         }
         */
 
-        // Il server dice al client di aprire l'interfaccia
         // Il client qua non fa niente. Apre la UI quando glie lo dice il server
         if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer))
         {
             return InteractionResult.SUCCESS;
         }
 
-        TerminalCache.CacheValue cached = TerminalCache.getOrCreateSession(level, pos);
+        TerminalCache.CacheValue cached = TerminalCache.getOrCreateSession((ServerLevel) level, pos);
 
+        // Il server dice al client di aprire l'interfaccia terminalScreen
         ServerPlayNetworking.send(serverPlayer, new OpenTerminalS2CPacket(pos, cached.history(), cached.session().getPrompt()));
         return InteractionResult.CONSUME;
     }

@@ -26,10 +26,10 @@ public class HubBlockEntity extends NetworkingBlockEntity
 
         hostname = "Hub";
 
-        nics.put(Direction.NORTH, new NetworkInterface(MacAddress.ALL_ZEROS, pos, Direction.NORTH, ConnectorType.RJ45));
-        nics.put(Direction.SOUTH, new NetworkInterface(MacAddress.ALL_ZEROS, pos, Direction.SOUTH, ConnectorType.RJ45));
-        nics.put(Direction.EAST, new NetworkInterface(MacAddress.ALL_ZEROS, pos, Direction.EAST, ConnectorType.RJ45));
-        nics.put(Direction.WEST, new NetworkInterface(MacAddress.ALL_ZEROS, pos, Direction.WEST, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth0", pos, Direction.NORTH, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth1", pos, Direction.SOUTH, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth2", pos, Direction.EAST, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth3", pos, Direction.WEST, ConnectorType.RJ45));
     }
 
     @Override

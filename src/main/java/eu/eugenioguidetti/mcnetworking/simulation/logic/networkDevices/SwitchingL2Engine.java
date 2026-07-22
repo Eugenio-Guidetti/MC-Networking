@@ -10,7 +10,6 @@ import eu.eugenioguidetti.mcnetworking.simulation.logic.L2Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.NetworkStack;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
-import net.minecraft.core.Direction;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,10 +20,10 @@ import java.util.Map;
  */
 public class SwitchingL2Engine implements L2Engine
 {
-    protected Map<MacAddress, Direction> switchingTable = new HashMap<>();
+    protected Map<MacAddress, String> switchingTable = new HashMap<>();
 
     @Override
-    public void processFrame(EthernetFrame frame, Direction from, NetworkStack stack)
+    public void processFrame(EthernetFrame frame, String from, NetworkStack stack)
     {
         // Evito di inserire nella switching table indirizzi MAC vuoti o di broadcast (non dovrebbe capitare)
         if (!frame.sourceMac().equals(MacAddress.ALL_ZEROS) && !frame.sourceMac().equals(MacAddress.BROADCAST))
@@ -39,7 +38,7 @@ public class SwitchingL2Engine implements L2Engine
             return;
         }
 
-        Direction out = switchingTable.get(frame.destMac());
+        String out = switchingTable.get(frame.destMac());
 
         // Non so a chi mandare il frame
         if (out == null)
@@ -54,7 +53,7 @@ public class SwitchingL2Engine implements L2Engine
         }
     }
 
-    public Map<MacAddress, Direction> getSwitchingTable()
+    public Map<MacAddress, String> getSwitchingTable()
     {
         return switchingTable;
     }

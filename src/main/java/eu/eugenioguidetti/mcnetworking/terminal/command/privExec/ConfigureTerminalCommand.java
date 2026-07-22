@@ -14,13 +14,12 @@ import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
  *
  * @author Eugenio Guidetti
  */
-public class ConfigureCommand implements TerminalCommand
+public class ConfigureTerminalCommand implements TerminalCommand
 {
     @Override
-    public String execute(ConsoleSession session, String[] args)
+    public void execute(ConsoleSession session, String[] args)
     {
         session.setCurrentMode(TerminalMode.GLOBAL_CONFIG);
-        return "";
     }
 
     @Override
@@ -30,7 +29,7 @@ public class ConfigureCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription()
+    public String getDescription(ConsoleSession session)
     {
         return "Vai alla modalità di configurazione " + TerminalMode.GLOBAL_CONFIG;
     }

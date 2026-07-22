@@ -17,10 +17,10 @@ import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 public class HostnameCommand implements TerminalCommand
 {
     @Override
-    public String execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException
+    public void execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException
     {
         session.getDevice().setHostname(args[1]);
-        return "";
+        session.sendOutput("");
     }
 
     @Override
@@ -30,7 +30,7 @@ public class HostnameCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription()
+    public String getDescription(ConsoleSession session)
     {
         return "Imposta l'hostname del dispositivo";
     }

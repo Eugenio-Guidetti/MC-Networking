@@ -13,7 +13,6 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ARGB;
@@ -32,10 +31,9 @@ public class EndDeviceL2Engine implements L2Engine
     }
 
     @Override
-    public void processFrame(EthernetFrame frame, Direction from, NetworkStack stack)
+    public void processFrame(EthernetFrame frame, String from, NetworkStack stack)
     {
         processColors(frame, from, stack);
-
 
         MacAddress interfaceMac = stack.getNetworkReceiver().getInterface(from).getMacAddress();
 
@@ -52,7 +50,7 @@ public class EndDeviceL2Engine implements L2Engine
         }
     }
 
-    private void processColors(EthernetFrame frame, Direction from, NetworkStack stack)
+    private void processColors(EthernetFrame frame, String from, NetworkStack stack)
     {
         MacAddress interfaceMac = stack.getNetworkReceiver().getInterface(from).getMacAddress();
 

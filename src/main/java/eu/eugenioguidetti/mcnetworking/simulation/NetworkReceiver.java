@@ -20,15 +20,21 @@ public interface NetworkReceiver
 {
     /**
      * @param frame Il frame in arrivo.
-     * @param from  L'interfaccia a cui è stato inviato il frame
+     * @param from  Il nome dell'interfaccia a cui è stato inviato il frame
      */
-    void receiveFrame(@NotNull EthernetFrame frame, @NotNull Direction from);
+    void receiveFrame(@NotNull EthernetFrame frame, @NotNull String from);
+
+    void putInterface(@NotNull NetworkInterface networkInterface);
+
+    NetworkInterface getInterface(String nicName);
 
     NetworkInterface getInterface(Direction face);
 
-    Map<Direction, NetworkInterface> getNics();
+    String getInterfaceName(Direction face);
 
-    void disconnectAll();
+    Map<String, NetworkInterface> getNics();
+
+    void disconnectAllPhysical();
 
     void sync();
 

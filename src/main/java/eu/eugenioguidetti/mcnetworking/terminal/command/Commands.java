@@ -9,7 +9,7 @@ Data: 07/06/2026
 import eu.eugenioguidetti.mcnetworking.terminal.command.globalConfig.HostnameCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.interfaceConfig.InterfaceCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.interfaceConfig.IpCommand;
-import eu.eugenioguidetti.mcnetworking.terminal.command.privExec.ConfigureCommand;
+import eu.eugenioguidetti.mcnetworking.terminal.command.privExec.ConfigureTerminalCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.privExec.PingCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.userExec.EnableCommand;
 
@@ -23,7 +23,8 @@ public class Commands extends CommandRegistrar
     {
         super();
 
-        commands.put("configure", new ConfigureCommand());
+        commands.put("clear", new ClearCommand());
+        commands.put("configure", new ConfigureTerminalCommand());
         commands.put("enable", new EnableCommand());
         commands.put("end", new EndCommand());
         commands.put("exit", new ExitCommand());

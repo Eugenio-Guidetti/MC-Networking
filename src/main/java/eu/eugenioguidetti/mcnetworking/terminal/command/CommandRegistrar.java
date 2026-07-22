@@ -6,6 +6,7 @@ Cognome: Guidetti
 Data: 10/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 
 import java.util.HashMap;
@@ -26,18 +27,18 @@ public abstract class CommandRegistrar
         commands.put("help", new HelpCommand(commands.entrySet()));
     }
 
-    public String parseInput(ConsoleSession session, String input)
+    public void parseInput(ConsoleSession session, String input)
     {
         if (input == null || input.trim().isEmpty())
         {
-            return "";
+            return;
         }
 
         // Spezza l'input: "ip address 192.168.1.1" -> ["ip", "address", "192.168.1.1"]
-        return processInput(session, input.trim().split("\\s+"));
+        processInput(session, input.trim().split("\\s+"));
     }
 
-    public String processInput(ConsoleSession session, String[] args)
+    public void processInput(ConsoleSession session, String[] args)
     {
         String commandName = args[0].toLowerCase();
 
@@ -45,32 +46,31 @@ public abstract class CommandRegistrar
 
         if (command == null || !command.canRunCommand(session))
         {
-            return "% Comando sconosciuto: " + commandName;
+            session.sendOutput("% Comando sconosciuto: " + commandName);
+            return;
         }
-
-        String error = "% Errore: ";
 
         try
         {
-            return command.execute(session, args);
+            command.execute(session, args);
         }
         catch (ArrayIndexOutOfBoundsException e)
         {
-            error += "Argomento mancante: " + e.getMessage();
+            session.sendError("Argomento mancante: " + e.getMessage(), e);
         }
         catch (IllegalArgumentException e)
         {
-            error += "Argomento invalido: " + e.getMessage();
+            session.sendError("Argomento invalido: " + e.getMessage(), e);
         }
         catch (IllegalStateException e)
         {
-            error += "Stato invalido: " + e.getMessage();
+            session.sendError("Stato invalido: " + e.getMessage(), e);
         }
         catch (Exception e)
         {
-            error += "Errore generico:" + e.getMessage();
-        }
+            session.sendError("Errore generico: " + e.getMessage(), e);
 
-        return error;
+            MCNetworking.LOGGER.error("Errore generico: ", e);
+        }
     }
 }

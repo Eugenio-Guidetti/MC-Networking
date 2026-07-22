@@ -6,6 +6,7 @@ Cognome: Guidetti
 Data: 10/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
@@ -25,31 +26,32 @@ public class IpCommand extends CommandRegistrar implements TerminalCommand
         super();
 
         commands.put("address", new IpAddressCommand());
+        commands.put("default_gateway", new IpDefaultGatewayCommand());
     }
 
     @Override
-    public String execute(ConsoleSession session, String[] args) throws IllegalArgumentException, ArrayIndexOutOfBoundsException
+    public void execute(ConsoleSession session, String[] args) throws IllegalArgumentException, ArrayIndexOutOfBoundsException
     {
         if (args.length == 1)
         {
-            return getDescription();
+            session.sendOutput(getDescription(session));
+            return;
         }
 
         String[] newArgs = Arrays.copyOfRange(args, 1, args.length);
-        String output = processInput(session, newArgs);
+        processInput(session, newArgs);
 
         session.getDevice().sync();
-        return output;
     }
 
     @Override
     public boolean canRunCommand(ConsoleSession session)
     {
-        return session.getCurrentMode().equals(TerminalMode.INTERFACE_CONFIG) && session.getDevice().getDeviceLayer() >= 3;
+        return session.getDevice().getDeviceLayer() >= 3;
     }
 
     @Override
-    public String getDescription()
+    public String getDescription(ConsoleSession session)
     {
         return "Configurazione IP.";
     }
@@ -58,7 +60,7 @@ public class IpCommand extends CommandRegistrar implements TerminalCommand
     static class IpAddressCommand implements TerminalCommand
     {
         @Override
-        public String execute(ConsoleSession session, String[] args) throws IllegalArgumentException, ArrayIndexOutOfBoundsException
+        public void execute(ConsoleSession session, String[] args) throws IllegalArgumentException, ArrayIndexOutOfBoundsException
         {
             Ipv4Address ip;
 
@@ -71,31 +73,74 @@ public class IpCommand extends CommandRegistrar implements TerminalCommand
                 ip = new Ipv4Address(args[1], args[2]);
             }
 
-            if (ip.getLunghezzaPrefisso() == 0 || ip.getLunghezzaPrefisso() == 32)
+            if (!ip.equals(Ipv4Address.ALL_ZEROS))
             {
-                throw new IllegalArgumentException("Subnet mask non valida: " + ip.getSubnetMaskString());
-            }
+                if (ip.getLunghezzaPrefisso() == 0 || ip.getLunghezzaPrefisso() == 32)
+                {
+                    throw new IllegalArgumentException("Subnet mask non valida: " + ip.getSubnetMaskString());
+                }
 
-            if (ip.isIndirizzoDiRete() || ip.isIndirizzoDiBroadcast() || ip.isIndirizzoDiLoopback())
-            {
-                throw new IllegalArgumentException("Non puoi assegnare questo indirizzo ad un'interfaccia: " + ip);
+                if (ip.isIndirizzoDiRete() || ip.isIndirizzoDiBroadcast() || ip.isIndirizzoDiLoopback())
+                {
+                    throw new IllegalArgumentException("Non puoi assegnare questo indirizzo ad un'interfaccia: " + ip);
+                }
             }
 
             session.getSelectedInterface().setIpAddress(ip);
-
-            return "";
         }
 
         @Override
         public boolean canRunCommand(ConsoleSession session)
         {
-            return true;
+            return session.getCurrentMode().equals(TerminalMode.INTERFACE_CONFIG);
         }
 
         @Override
-        public String getDescription()
+        public String getDescription(ConsoleSession session)
         {
             return "Assegna un indirizzo IP all'interfaccia";
+        }
+    }
+
+    static class IpDefaultGatewayCommand implements TerminalCommand
+    {
+        @Override
+        public void execute(ConsoleSession session, String[] args) throws IllegalArgumentException, ArrayIndexOutOfBoundsException
+        {
+            if (!(session.getDevice() instanceof HostBlockEntity host))
+            {
+                throw new IllegalStateException("Non puoi assegnare un default gateway ad un " + session
+                        .getDevice()
+                        .getClass()
+                        .getSimpleName());
+            }
+
+            Ipv4Address dg;
+            dg = new Ipv4Address(args[1]);
+
+            if (dg.getLunghezzaPrefisso() != 32)
+            {
+                throw new IllegalArgumentException("Subnet mask non valida: " + dg.getSubnetMaskString());
+            }
+
+            if (dg.isIndirizzoDiRete() || dg.isIndirizzoDiBroadcast() || dg.isIndirizzoDiLoopback())
+            {
+                throw new IllegalArgumentException("Default gateway non valido: " + dg);
+            }
+
+            host.setDefaultGateway(dg);
+        }
+
+        @Override
+        public boolean canRunCommand(ConsoleSession session)
+        {
+            return session.getCurrentMode().equals(TerminalMode.GLOBAL_CONFIG) && session.getDevice() instanceof HostBlockEntity;
+        }
+
+        @Override
+        public String getDescription(ConsoleSession session)
+        {
+            return "Imposta l'indirizzo IPv4 del default gateway";
         }
     }
 }

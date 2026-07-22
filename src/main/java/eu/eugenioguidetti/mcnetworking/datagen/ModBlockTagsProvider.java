@@ -29,16 +29,16 @@ public class ModBlockTagsProvider extends FabricTagsProvider.BlockTagsProvider
     @Override
     protected void addTags(HolderLookup.@NonNull Provider provider)
     {
-        valueLookupBuilder(BlockTags.MINEABLE_WITH_PICKAXE)
-                .add(ModBlocks.HOST_BLOCK)
-                .add(ModBlocks.HUB_BLOCK)
-                .add(ModBlocks.SWITCH_BLOCK)
-                .add(ModBlocks.ROUTER_BLOCK);
+        tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                .add(ModBlocks.getRK(ModBlocks.HOST_BLOCK))
+                .add(ModBlocks.getRK(ModBlocks.HUB_BLOCK))
+                .add(ModBlocks.getRK(ModBlocks.SWITCH_BLOCK))
+                .add(ModBlocks.getRK(ModBlocks.ROUTER_BLOCK));
 
-        valueLookupBuilder(BlockTags.NEEDS_IRON_TOOL)
-                .add(ModBlocks.HOST_BLOCK)
-                .add(ModBlocks.HUB_BLOCK)
-                .add(ModBlocks.SWITCH_BLOCK)
-                .add(ModBlocks.ROUTER_BLOCK);
+        tag(BlockTags.NEEDS_IRON_TOOL)
+                .add(ModBlocks.getRK(ModBlocks.HOST_BLOCK))
+                .add(ModBlocks.getRK(ModBlocks.HUB_BLOCK))
+                .add(ModBlocks.getRK(ModBlocks.SWITCH_BLOCK))
+                .add(ModBlocks.getRK(ModBlocks.ROUTER_BLOCK));
     }
 }

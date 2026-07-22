@@ -15,9 +15,9 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ApplicationPayload;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -50,47 +50,17 @@ public class HostBlockEntity extends NetworkingBlockEntity
         hostname = "Host";
 
         Direction facing = state.getValue(HostBlock.HORIZONTAL_FACING);
-        nics.put(facing, new NetworkInterface(pos, facing, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth0", pos, facing, ConnectorType.RJ45));
     }
 
-    public void triggerSendPacket(Ipv4Address destIp, String message)
+    public void triggerSendPacket(Ipv4Address destIp, ApplicationPayload payload)
     {
         if (this.level == null || this.level.isClientSide())
         {
             return;
         }
 
-        // Invia il pacchetto alle interfacce
-        for (NetworkInterface nic : this.nics.values())
-        {
-            if (!nic.isConnected())
-            {
-                continue;
-            }
-
-            String payload = String.format("""
-                                                   PING§7
-                                                   Sender nic:
-                                                      MAC: %s
-                                                      pos: %s
-                                                      dir: %s
-                                                      connType: %s
-                                                   Receiver nic:
-                                                      pos: %s
-                                                      dir: %s
-                                                   CableType: %s""",
-                                           nic.getMacAddress(),
-                                           nic.getPos().toShortString(),
-                                           nic.getDirection(),
-                                           nic.getConnectorType(),
-                                           nic.getConnectedTargetPos().toShortString(),
-                                           nic.getConnectedTargetFace(),
-                                           nic.getConnectedCableType().name());
-
-            Ipv4Packet packet = new Ipv4Packet(nic.getIpAddress(), destIp, new ApplicationPayload(message));
-
-            stack.sendPacket(packet);
-        }
+        stack.sendPacket(destIp, payload);
     }
 
 
@@ -103,7 +73,20 @@ public class HostBlockEntity extends NetworkingBlockEntity
 
     public Map<Ipv4Address, MacAddress> getArpCache()
     {
-        return l3Engine.getArpCache();
+        return l3Engine.getArpManager().getArpCache();
+    }
+
+    public void setDefaultGateway(Ipv4Address dg)
+    {
+        l3Engine.setDefaultGateway(dg);
+    }
+
+    @Override
+    public void tickServer(Level level)
+    {
+        super.tickServer(level);
+
+        l3Engine.getArpManager().tick(this);
     }
 
 

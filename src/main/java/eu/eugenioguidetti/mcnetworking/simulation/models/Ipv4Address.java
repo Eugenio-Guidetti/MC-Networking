@@ -18,6 +18,8 @@ public class Ipv4Address
 {
     public static final Ipv4Address ALL_ZEROS = new Ipv4Address(0x00000000, 0);
     public static final Ipv4Address BROADCAST = new Ipv4Address(0xFFFFFFFF, 32);
+    public static final Ipv4Address LOOPBACK = new Ipv4Address(0x7F000001, 8);
+
     private final int ip;
     private final int lunghezzaPrefisso;
 
@@ -212,15 +214,17 @@ public class Ipv4Address
         return ((this.ip >> 24) & 0x000000FF) == 127;
     }
 
-    public boolean stessaRete(Ipv4Address altroIp)
+    public boolean contieneIp(Ipv4Address altroIp)
     {
         if (altroIp == null)
         {
             return false;
         }
 
-        int ipRete1 = this.getIndirizzoDiRete().ip;
-        int ipRete2 = new Ipv4Address(altroIp.ip, this.lunghezzaPrefisso).getIndirizzoDiRete().ip;
+        int netMask = this.lunghezzaPrefisso == 0 ? 0 : 0xFFFFFFFF << (32 - this.lunghezzaPrefisso);
+
+        int ipRete1 = this.ip & netMask;
+        int ipRete2 = altroIp.ip & netMask;
 
         return ipRete1 == ipRete2;
     }

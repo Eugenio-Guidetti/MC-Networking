@@ -33,10 +33,10 @@ public class SwitchBlockEntity extends NetworkingBlockEntity
 
         hostname = "Switch";
 
-        nics.put(Direction.NORTH, new NetworkInterface(pos, Direction.NORTH, ConnectorType.RJ45));
-        nics.put(Direction.SOUTH, new NetworkInterface(pos, Direction.SOUTH, ConnectorType.RJ45));
-        nics.put(Direction.EAST, new NetworkInterface(pos, Direction.EAST, ConnectorType.RJ45));
-        nics.put(Direction.WEST, new NetworkInterface(pos, Direction.WEST, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth0", pos, Direction.NORTH, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth1", pos, Direction.SOUTH, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth2", pos, Direction.EAST, ConnectorType.RJ45));
+        putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth3", pos, Direction.WEST, ConnectorType.RJ45));
     }
 
     @Override
@@ -45,7 +45,7 @@ public class SwitchBlockEntity extends NetworkingBlockEntity
         return 2;
     }
 
-    public Map<MacAddress, Direction> getSwitchingTable()
+    public Map<MacAddress, String> getSwitchingTable()
     {
         return this.l2Engine.getSwitchingTable();
     }

@@ -40,6 +40,11 @@ public class ModBlocks
                                                            BlockBehaviour.Properties.of().strength(4),
                                                            true);
 
+    public static ResourceKey<Block> getRK(Block block)
+    {
+        return BuiltInRegistries.BLOCK.getResourceKey(block).orElseThrow();
+    }
+
     private static Block registerBlock(String name,
                                        Function<BlockBehaviour.Properties, Block> blockFactory,
                                        BlockBehaviour.Properties settings,

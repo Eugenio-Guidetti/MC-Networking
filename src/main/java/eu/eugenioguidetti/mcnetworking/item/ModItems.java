@@ -37,6 +37,11 @@ public class ModItems
                                                               props -> new CableItem(props, CableType.FIBER_OPTIC),
                                                               new Item.Properties());
 
+    public static ResourceKey<Item> getRK(Item item)
+    {
+        return BuiltInRegistries.ITEM.getResourceKey(item).orElseThrow();
+    }
+
     private static Item registerItem(String name, Function<Item.Properties, Item> function, Item.Properties settings)
     {
         return Registry.register(BuiltInRegistries.ITEM,

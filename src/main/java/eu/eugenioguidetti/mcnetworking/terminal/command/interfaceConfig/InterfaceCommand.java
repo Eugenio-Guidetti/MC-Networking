@@ -19,22 +19,33 @@ import net.minecraft.core.Direction;
 public class InterfaceCommand implements TerminalCommand
 {
     @Override
-    public String execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
+    public void execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
     {
         String message = null;
 
-        Direction dir = Direction.byName(args[1].toLowerCase());
-        NetworkInterface networkInterface = session.getDevice().getInterface(dir);
+        NetworkInterface nic;
+        String name = args[1];
 
-        if (networkInterface == null)
+        // toLowerCase non dovrebbe servire
+        Direction dir = Direction.byName(name.toLowerCase());
+
+        if (dir != null)
+        {
+            nic = session.getDevice().getInterface(dir);
+        }
+        else
+        {
+            nic = session.getDevice().getInterface(name);
+        }
+
+
+        if (nic == null)
         {
             throw new IllegalArgumentException("Interfaccia: " + args[1].toLowerCase() + " non trovata");
         }
 
-        session.selectInterface(dir);
+        session.selectInterface(nic.getName());
         session.setCurrentMode(TerminalMode.INTERFACE_CONFIG);
-
-        return "";
     }
 
     @Override
@@ -46,7 +57,7 @@ public class InterfaceCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription()
+    public String getDescription(ConsoleSession session)
     {
         return "Vai alla modalità di configurazione " + TerminalMode.INTERFACE_CONFIG;
     }

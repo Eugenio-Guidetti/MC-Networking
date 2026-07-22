@@ -16,7 +16,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 public class ExitCommand implements TerminalCommand
 {
     @Override
-    public String execute(ConsoleSession session, String[] args) throws IllegalStateException
+    public void execute(ConsoleSession session, String[] args) throws IllegalStateException
     {
         switch (session.getCurrentMode())
         {
@@ -24,13 +24,12 @@ public class ExitCommand implements TerminalCommand
                 session.setCurrentMode(TerminalMode.PRIV_EXEC);
                 break;
             case INTERFACE_CONFIG:
+                session.deselectInterface();
                 session.setCurrentMode(TerminalMode.GLOBAL_CONFIG);
                 break;
             default:
                 throw new IllegalStateException(session.getCurrentMode().name());
         }
-
-        return "";
     }
 
     @Override
@@ -42,8 +41,8 @@ public class ExitCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription()
+    public String getDescription(ConsoleSession session)
     {
-        return "Vai alla modalità di configurazione precedente";
+        return "Vai alla modalità precedente";
     }
 }

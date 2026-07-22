@@ -7,9 +7,9 @@ Data: 09/06/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.PingJob;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
-import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 
 /**
@@ -18,19 +18,21 @@ import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
  */
 public class PingCommand implements TerminalCommand
 {
-    @Override
-    public String execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
-    {
-        int resends;
+    //ping [dest_ip] [message] [<resends>]
 
+    @Override
+    public void execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
+    {
         HostBlockEntity host = (HostBlockEntity) session.getDevice();
         Ipv4Address destIp = new Ipv4Address(args[1]);
+        String message = args[2];
+        int resends;
 
         if (args.length == 4)
         {
             resends = Integer.parseInt(args[3]);
 
-            if (resends <= 0)
+            if (resends <= 0 && resends != -1)
             {
                 throw new IllegalArgumentException("Numero di resend non valido: " + resends);
             }
@@ -40,12 +42,7 @@ public class PingCommand implements TerminalCommand
             resends = 4;
         }
 
-        for (int i = 0; i < resends; i++)
-        {
-            host.triggerSendPacket(destIp, args[2]);
-        }
-
-        return "";
+        host.startJob(new PingJob(destIp, message, resends));
     }
 
     @Override
@@ -56,12 +53,12 @@ public class PingCommand implements TerminalCommand
             return false;
         }
 
-        return session.getCurrentMode().equals(TerminalMode.PRIV_EXEC);
+        return true;
     }
 
     @Override
-    public String getDescription()
+    public String getDescription(ConsoleSession session)
     {
-        return "Ping di test";
+        return "Invia messaggi di ping (non ancora pacchetti ICMP) ad un altro host";
     }
 }

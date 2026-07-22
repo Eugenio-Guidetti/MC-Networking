@@ -3,34 +3,33 @@ package eu.eugenioguidetti.mcnetworking.terminal.command;
 /*
 Nome: Eugenio
 Cognome: Guidetti
-Data: 09/06/2026
+Data: 18/07/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
-import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
+import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
 
 /**
  *
  * @author Eugenio Guidetti
  */
-public class EndCommand implements TerminalCommand
+public class ClearCommand implements TerminalCommand
 {
     @Override
     public void execute(ConsoleSession session, String[] args)
     {
-        session.setCurrentMode(TerminalMode.USER_EXEC);
-        session.selectInterface(null);
+        TerminalCache.clearBlock(session.getLevel(), session.getPos());
     }
 
     @Override
     public boolean canRunCommand(ConsoleSession session)
     {
-        return !session.getCurrentMode().equals(TerminalMode.USER_EXEC);
+        return true;
     }
 
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Vai alla modalità di configurazione " + TerminalMode.USER_EXEC;
+        return "Pulisce il terminale";
     }
 }

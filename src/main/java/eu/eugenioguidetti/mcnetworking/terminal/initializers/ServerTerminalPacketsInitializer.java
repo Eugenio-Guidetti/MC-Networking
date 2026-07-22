@@ -16,7 +16,6 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 
 /**
  *
@@ -45,19 +44,12 @@ public class ServerTerminalPacketsInitializer implements ModInitializer
 
                                          String rawCommand = payload.command();
 
-                                         ServerPlayer player = context.player();
-
                                          // 1. Recupera la sessione del giocatore (o creala se è il primo comando) dalla cache sul server
                                          TerminalCache.CacheValue cached = TerminalCache.getOrCreateSession(level, pos);
                                          TerminalCache.addLine(level, pos, cached.session().getPrompt() + rawCommand);
 
                                          // 2. Fai processare il comando al Registry
-                                         String output = commands.parseInput(cached.session(), rawCommand);
-                                         TerminalCache.addLine(level, pos, output);
-
-                                         // 3. Spedisci l'output e il prompt aggiornato indietro al client
-                                         ServerPlayNetworking.send(player,
-                                                                   new TerminalOutputS2CPacket(output, cached.session().getPrompt()));
+                                         commands.parseInput(cached.session(), rawCommand);
                                      });
         });
     }

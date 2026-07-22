@@ -10,6 +10,8 @@ import eu.eugenioguidetti.mcnetworking.client.rendering.CablesRenderPipeline;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.NetworkStack;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.Job;
+import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
@@ -32,8 +34,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  *
@@ -41,7 +42,11 @@ import java.util.Map;
  */
 public abstract class NetworkingBlockEntity extends BlockEntity implements NetworkReceiver
 {
-    protected final Map<Direction, NetworkInterface> nics = new EnumMap<>(Direction.class);
+    private final Map<String, NetworkInterface> nics = new HashMap<>();
+    private final Map<Direction, String> physicalPortsNames = new EnumMap<>(Direction.class);
+
+    private final List<Job> activeJobs = new ArrayList<>();
+
     protected String hostname;
 
     protected NetworkStack stack;
@@ -51,30 +56,36 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
         super(type, worldPosition, blockState);
 
         this.stack = new NetworkStack(this);
+
+        NetworkInterface loopbackInterface = new NetworkInterface(NetworkInterface.LOOPBACK_NAME, getBlockPos(), null, null);
+        loopbackInterface.setIpAddress(Ipv4Address.LOOPBACK);
+        putInterface(loopbackInterface);
     }
 
-    public static <E extends NetworkingBlockEntity> void serverTick(Level level, BlockPos pos, BlockState state, E entity)
+    public static <E extends NetworkingBlockEntity> void serverTick(@NotNull Level level, BlockPos pos, BlockState state, E entity)
     {
         if (level.isClientSide())
         {
             return;
         }
 
-        for (NetworkInterface nic : entity.nics.values())
-        {
-            nic.tick(level);
-        }
+        entity.tickServer(level);
     }
 
-    public static <E extends NetworkingBlockEntity> void clientTick(Level level, BlockPos pos, BlockState state, E entity)
+    public static <E extends NetworkingBlockEntity> void clientTick(@NotNull Level level, BlockPos pos, BlockState state, E entity)
     {
         if (!level.isClientSide())
         {
             return;
         }
 
-        for (NetworkInterface nic : entity.nics.values())
+        for (NetworkInterface nic : entity.getNics().values())
         {
+            if (nic.isLoopback())
+            {
+                continue;
+            }
+
             if (nic.isConnected())
             {
                 CablesRenderPipeline.addCable(nic.getPos(),
@@ -90,8 +101,19 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
         }
     }
 
+    public String getHostname()
+    {
+        return hostname;
+    }
+
+    public void setHostname(String hostname)
+    {
+        this.hostname = hostname;
+        this.sync();
+    }
+
     @Override
-    public void receiveFrame(@NotNull EthernetFrame frame, @NotNull Direction from)
+    public void receiveFrame(@NotNull EthernetFrame frame, @NotNull String from)
     {
         if (this.level == null || this.level.isClientSide() || this.stack == null)
         {
@@ -102,28 +124,59 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     }
 
     @Override
-    public NetworkInterface getInterface(Direction face)
+    public void putInterface(@NotNull NetworkInterface networkInterface)
     {
-        return nics.get(face);
+        String name = networkInterface.getName();
+        Direction direction = networkInterface.getDirection();
+
+        nics.put(name, networkInterface);
+
+        if (direction != null)
+        {
+            physicalPortsNames.put(direction, name);
+        }
     }
 
     @Override
-    public Map<Direction, NetworkInterface> getNics()
+    public NetworkInterface getInterface(String nicName)
+    {
+        return nics.get(nicName);
+    }
+
+    @Override
+    public NetworkInterface getInterface(Direction face)
+    {
+        return nics.get(getInterfaceName(face));
+    }
+
+    @Override
+    public String getInterfaceName(Direction face)
+    {
+        if (face == null || !physicalPortsNames.containsKey(face))
+        {
+            return null;
+        }
+
+        return physicalPortsNames.get(face);
+    }
+
+    @Override
+    public Map<String, NetworkInterface> getNics()
     {
         return nics;
     }
 
     @Override
-    public void disconnectAll()
+    public void disconnectAllPhysical()
     {
         if (this.level == null || this.level.isClientSide())
         {
             return;
         }
 
-        for (NetworkInterface nic : this.nics.values())
+        for (String nicName : this.physicalPortsNames.values())
         {
-            disconnectNic(nic);
+            disconnectNic(nics.get(nicName));
         }
     }
 
@@ -135,22 +188,25 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
         }
 
         BlockPos targetPos = nic.getConnectedTargetPos();
-        Direction targetFace = nic.getConnectedTargetFace();
+        String targetName = nic.getConnectedTargetName();
+
         CableType cableType = nic.getConnectedCableType();
+        if (cableType != null)
+        {
+            ItemStack dropStack = new ItemStack(cableType.getAsItem());
 
-        ItemStack dropStack = new ItemStack(cableType.getAsItem());
-
-        Containers.dropItemStack(this.level,
-                                 this.worldPosition.getX() + 0.5,
-                                 this.worldPosition.getY() + 0.5,
-                                 this.worldPosition.getZ() + 0.5,
-                                 dropStack);
+            Containers.dropItemStack(this.level,
+                                     this.worldPosition.getX() + 0.5,
+                                     this.worldPosition.getY() + 0.5,
+                                     this.worldPosition.getZ() + 0.5,
+                                     dropStack);
+        }
 
 
         BlockEntity targetEntity = this.level.getBlockEntity(targetPos);
         if ((targetEntity instanceof NetworkReceiver receiver))
         {
-            NetworkInterface remoteNic = receiver.getInterface(targetFace);
+            NetworkInterface remoteNic = receiver.getInterface(targetName);
             if (remoteNic != null)
             {
                 remoteNic.disconnect();
@@ -161,6 +217,25 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
 
         nic.disconnect();
         sync();
+    }
+
+
+    // --- Metodi minecraft ---
+
+    public void startJob(Job job)
+    {
+        this.activeJobs.add(job);
+    }
+
+    public void tickServer(Level level)
+    {
+        for (NetworkInterface nic : nics.values())
+        {
+            nic.tick(level);
+        }
+
+        // Rimuove automaticamente i job completati (quando tick() restituisce true)
+        activeJobs.removeIf(job -> job.tick(this));
     }
 
     // Sincronizza i dati con i client
@@ -178,9 +253,7 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
         this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
     }
 
-
-    // --- Salvataggio/caricamento dati blocco in NBT ---
-
+    // Salvataggio/caricamento dati blocco in NBT
     @Override
     protected void saveAdditional(ValueOutput output)
     {
@@ -190,12 +263,17 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
 
         ValueOutput nicsOutput = output.child("NetworkInterfaces");
 
-        for (Map.Entry<Direction, NetworkInterface> entry : this.nics.entrySet())
+        for (Map.Entry<String, NetworkInterface> entry : this.nics.entrySet())
         {
-            Direction face = entry.getKey();
+            String name = entry.getKey();
+            if (name.equals(NetworkInterface.LOOPBACK_NAME))
+            {
+                continue;
+            }
+
             NetworkInterface nic = entry.getValue();
 
-            ValueOutput nicOutput = nicsOutput.child(face.getName());
+            ValueOutput nicOutput = nicsOutput.child(name);
             nic.save(nicOutput);
         }
     }
@@ -211,24 +289,23 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
 
         if (nicsInput == null)
         {
-            for (NetworkInterface nic : this.nics.values())
-            {
-                nic.disconnect();
-            }
+            disconnectAllPhysical();
 
             return;
         }
 
-        for (Map.Entry<Direction, NetworkInterface> entry : this.nics.entrySet())
+        for (Map.Entry<String, NetworkInterface> entry : this.nics.entrySet())
         {
-            Direction face = entry.getKey();
+            String name = entry.getKey();
             NetworkInterface nic = entry.getValue();
 
-            ValueInput specificNicInput = nicsInput.child(face.getName()).orElse(null);
+            ValueInput specificNicInput = nicsInput.child(name).orElse(null);
 
             if (specificNicInput != null)
             {
-                nic.load(specificNicInput, face);
+                nic.load(specificNicInput);
+
+                physicalPortsNames.put(nic.getDirection(), name);
             }
             else
             {
@@ -256,22 +333,12 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     }
 
 
-    public String getHostname()
-    {
-        return hostname;
-    }
-
-    public void setHostname(String hostname)
-    {
-        this.hostname = hostname;
-        this.sync();
-    }
-
-
     // Blocco distrutto
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state)
     {
+        activeJobs.clear();
+
         if (this.level == null)
         {
             return;
@@ -281,8 +348,8 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
 
         if (blockEntity instanceof NetworkingBlockEntity netEntity)
         {
-            netEntity.disconnectAll();
-            TerminalCache.clearBlock(level, pos);
+            netEntity.disconnectAllPhysical();
+            TerminalCache.removeBlock(level, pos);
 
             if (level.isClientSide())
             {

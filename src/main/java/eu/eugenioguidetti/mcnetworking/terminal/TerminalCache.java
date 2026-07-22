@@ -9,6 +9,7 @@ Data: 07/06/2026
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -24,11 +25,19 @@ import java.util.Map;
  */
 public class TerminalCache
 {
-    private static final int MAX_LINES = 100;
+    private static final int MAX_LINES = 150;
     // Mappa che associa le coordinate del blocco (e dimensione) e al giocatore al suo storico e sessione
     private static final Map<GlobalPos, CacheValue> cache = new HashMap<>();
 
-    public static CacheValue getOrCreateSession(Level level, BlockPos pos)
+    public static CacheValue getOrCreateSession(NetworkingBlockEntity entity)
+    {
+        ServerLevel level = (ServerLevel) entity.getLevel();
+        BlockPos pos = entity.getBlockPos();
+
+        return getOrCreateSession(level, pos);
+    }
+
+    public static CacheValue getOrCreateSession(ServerLevel level, BlockPos pos)
     {
         if (level.isClientSide())
         {
@@ -49,7 +58,7 @@ public class TerminalCache
                 initialHistory.add("Benvenuto nel sistema operativo MCNetworking v1.0");
                 initialHistory.add("Digita \"help\" per info");
 
-                return new CacheValue(initialHistory, new ConsoleSession(device));
+                return new CacheValue(initialHistory, new ConsoleSession(pos, level, device));
             }
             else
             {
@@ -58,7 +67,7 @@ public class TerminalCache
         });
     }
 
-    public static void addLine(Level level, BlockPos pos, String line)
+    public static void addLine(ServerLevel level, BlockPos pos, String line)
     {
         if (line == null || line.isEmpty())
         {
@@ -74,7 +83,14 @@ public class TerminalCache
         }
     }
 
+
     public static void clearBlock(Level level, BlockPos pos)
+    {
+        GlobalPos key = GlobalPos.of(level.dimension(), pos);
+        cache.get(key).history.clear();
+    }
+
+    public static void removeBlock(Level level, BlockPos pos)
     {
         GlobalPos key = GlobalPos.of(level.dimension(), pos);
         cache.remove(key);

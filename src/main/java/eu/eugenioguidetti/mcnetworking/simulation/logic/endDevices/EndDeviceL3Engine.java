@@ -6,7 +6,6 @@ Cognome: Guidetti
 Data: 12/06/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.L3Engine;
@@ -18,14 +17,10 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ArpPayload;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
-import net.minecraft.core.Direction;
+import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
+import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -34,67 +29,14 @@ import java.util.Map;
 public class EndDeviceL3Engine implements L3Engine
 {
     private final ArpManager arpManager = new ArpManager();
-    // Quando non so l'indirizzo MAC associato all'indirizzo IP del destinatario metto il pacchetto destinato a lui in coda per inviarlo all'arrivo della ARP reply
-    private final Map<Integer, List<Ipv4Packet>> arpOutQueue = new HashMap<>();
-    NetworkingBlockEntity netEntity;
     private Ipv4Address defaultGateway = null;
 
+    // Serve solo a mostrare i messaggi nella chat di gioco
+    NetworkingBlockEntity netEntity;
     public void setNetEntity(NetworkingBlockEntity netEntity)
     {
         this.netEntity = netEntity;
     }
-
-    @Override
-    public void processPacket(Ipv4Packet packet, Direction from, NetworkStack stack)
-    {
-        Ipv4Address interfaceIp = stack.getNetworkReceiver().getInterface(from).getIpAddress();
-
-        // Il pacchetto non è destinato a me
-
-        Ipv4Address destIp = packet.destIp();
-        if (!destIp.equals(interfaceIp) && !destIp.isIndirizzoDiBroadcast(interfaceIp.getLunghezzaPrefisso()) && !destIp.isIndirizzoDiLoopback())
-        {
-            return;
-        }
-
-
-        NetworkPayload payload = packet.payload();
-
-        if (payload instanceof ArpPayload arp)
-        {
-            int operazioneArpGestita = arpManager.handleArp(arp, from, stack);
-            if (operazioneArpGestita != ArpPayload.OPERATION_ARP_REPLY)
-            {
-                return;
-            }
-
-            int resolvedIp = arp.senderIp().getIp();
-
-            List<Ipv4Packet> outPackets = arpOutQueue.getOrDefault(resolvedIp, null);
-
-            if (outPackets == null)
-            {
-                return;
-            }
-
-            for (Ipv4Packet outPacket : outPackets)
-            {
-                sendPacket(outPacket, stack);
-            }
-
-            arpOutQueue.remove(resolvedIp);
-
-            return;
-        }
-        else
-        {
-            processChatMessage(stack, packet);
-        }
-
-        // ... logica per ICMP, TCP, UDP, ecc.
-
-    }
-
     private void processChatMessage(NetworkStack stack, Ipv4Packet packet)
     {
         String message = "§a" + stack.getNetworkReceiver().getHostname() + ": Ricevuto: " + packet.payload().toString();
@@ -103,58 +45,138 @@ public class EndDeviceL3Engine implements L3Engine
         serverLevel.getServer().getPlayerList().broadcastSystemMessage(Component.literal(message), false);
     }
 
-    @Override
-    public void sendPacket(Ipv4Packet packet, NetworkStack stack)
-    {
-        Direction outFace = null;
 
-        for (var entry : stack.getNetworkReceiver().getNics().entrySet())
+    @Override
+    public void processPacket(Ipv4Packet packet, String from, NetworkStack stack)
+    {
+        Ipv4Address sourceIp = packet.sourceIp();
+        Ipv4Address destIp = packet.destIp();
+        Ipv4Address interfaceIp = stack.getNetworkReceiver().getInterface(from).getIpAddress();
+
+        boolean broadcast = destIp.equals(Ipv4Address.BROADCAST) || destIp.equals(interfaceIp.getIndirizzoDiBroadcast());
+        boolean perMe = destIp.equals(interfaceIp) || (from.equals(NetworkInterface.LOOPBACK_NAME) && destIp.isIndirizzoDiLoopback());
+
+        // Il pacchetto non è destinato a me
+        if (!perMe && !broadcast)
         {
-            if (entry.getValue().getIpAddress().equals(packet.sourceIp()))
+            return;
+        }
+        if (broadcast)
+        {
+            if (!packet.sourceIp().contieneIp(interfaceIp) && !packet.sourceIp().equals(Ipv4Address.ALL_ZEROS))
             {
-                outFace = entry.getKey();
-                break;
+                return;
             }
         }
 
-        if (outFace == null)
+        NetworkPayload payload = packet.payload();
+
+        if (payload instanceof ArpPayload arp)
         {
-            // Nessuna interfaccia configurata per inviare con questo indirizzo IP
+            arpManager.handleArp(arp, from, stack);
             return;
         }
 
-        NetworkInterface outNic = stack.getNetworkReceiver().getInterface(outFace);
-        Ipv4Address interfaceIp = outNic.getIpAddress();
+        processChatMessage(stack, packet);
+
+        // ... logica per ICMP, TCP, UDP, ecc.
+
+    }
+
+    @Override
+    public void sendPacket(Ipv4Address destIp, NetworkPayload payload, NetworkStack stack)
+    {
+        String outName = null;
         Ipv4Address nextHop = null;
 
-        if (interfaceIp.equals(packet.destIp()) || packet.destIp().isIndirizzoDiLoopback())
+        if (destIp.isIndirizzoDiLoopback())
         {
-            // "Invio" il pacchetto a me stesso
-            processPacket(packet, outFace, stack);
-
-            return;
-        }
-
-        if (interfaceIp.stessaRete(packet.destIp()))
-        {
-            nextHop = packet.destIp();
+            outName = NetworkInterface.LOOPBACK_NAME;
+            nextHop = Ipv4Address.LOOPBACK;
         }
         else
         {
-            if (defaultGateway == null)
+            for (var entry : stack.getNetworkReceiver().getNics().entrySet())
             {
-                // Destination Host Unreachable (nessun gateway configurato)
-                MCNetworking.LOGGER.warn("Destination Host Unreachable");
+                if (entry.getKey().equals(NetworkInterface.LOOPBACK_NAME))
+                {
+                    continue;
+                }
 
+                // Interfaccia non configurata
+                if (entry.getValue().getIpAddress().equals(Ipv4Address.ALL_ZEROS))
+                {
+                    continue;
+                }
+
+                if (entry.getValue().getIpAddress().contieneIp(destIp))
+                {
+                    // Rete di destinazione direttamente connessa
+                    outName = entry.getKey();
+                    nextHop = destIp;
+
+                    break;
+                }
+            }
+            try
+            {
+                if (outName == null)
+                {
+                    if (defaultGateway == null)
+                    {
+                        // Destination Host Unreachable (nessun gateway configurato)
+                        throw new RuntimeException("Destination Host Unreachable");
+                    }
+
+                    for (var entry : stack.getNetworkReceiver().getNics().entrySet())
+                    {
+                        if (entry.getKey().equals(NetworkInterface.LOOPBACK_NAME))
+                        {
+                            continue;
+                        }
+
+                        // Interfaccia non configurata
+                        if (entry.getValue().getIpAddress().equals(Ipv4Address.ALL_ZEROS))
+                        {
+                            continue;
+                        }
+
+                        if (entry.getValue().getIpAddress().contieneIp(defaultGateway))
+                        {
+                            // Rete di destinazione direttamente connessa
+                            outName = entry.getKey();
+                            nextHop = defaultGateway;
+                        }
+                    }
+                }
+                if (outName == null)
+                {
+                    throw new RuntimeException("Nessuna interfaccia trovata");
+                }
+            }
+            catch (RuntimeException e)
+            {
+                ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
+                session.sendError(e.getMessage(), e);
                 return;
             }
-
-            nextHop = defaultGateway;
         }
 
-        MacAddress targetMac = null;
+        NetworkInterface outNic = stack.getNetworkReceiver().getInterface(outName);
+        Ipv4Address outIp = outNic.getIpAddress();
 
-        if (nextHop.isIndirizzoDiBroadcast(interfaceIp.getLunghezzaPrefisso()))
+        Ipv4Packet packet = new Ipv4Packet(outIp, destIp, payload);
+
+        if (nextHop.equals(outIp) || nextHop.isIndirizzoDiLoopback())
+        {
+            // "Invio" il pacchetto a me stesso
+            processPacket(packet, outName, stack);
+
+            return;
+        }
+
+        MacAddress targetMac;
+        if (destIp.isIndirizzoDiBroadcast(nextHop.getLunghezzaPrefisso()))
         {
             targetMac = MacAddress.BROADCAST;
         }
@@ -165,30 +187,12 @@ public class EndDeviceL3Engine implements L3Engine
 
         if (targetMac == null)
         {
-            int nextHopIp = nextHop.getIp();
-
-            if (arpOutQueue.containsKey(nextHopIp))
-            {
-                var list = arpOutQueue.get(nextHopIp);
-
-                list.add(packet);
-
-                // La richiesta ARP per questo indirizzo IP è già stata mandata
-                return;
-            }
-
-            List<Ipv4Packet> packets = new ArrayList<>();
-            packets.add(packet);
-
-            arpOutQueue.put(nextHopIp, packets);
-            arpManager.sendArpRequest(nextHop, outFace, stack);
-
+            arpManager.enqueuePacket(packet, nextHop, outName, stack);
             return;
         }
 
         EthernetFrame frame = new EthernetFrame(outNic.getMacAddress(), targetMac, packet);
-
-        stack.sendFrameOut(frame, outFace);
+        stack.sendFrameOut(frame, outName);
     }
 
     public Ipv4Address getDefaultGateway()
@@ -201,8 +205,8 @@ public class EndDeviceL3Engine implements L3Engine
         this.defaultGateway = defaultGateway;
     }
 
-    public Map<Ipv4Address, MacAddress> getArpCache()
+    public ArpManager getArpManager()
     {
-        return arpManager.getArpCache();
+        return arpManager;
     }
 }

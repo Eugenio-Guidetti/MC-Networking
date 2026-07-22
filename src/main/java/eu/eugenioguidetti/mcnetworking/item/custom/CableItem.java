@@ -147,8 +147,8 @@ public class CableItem extends Item
             return InteractionResult.FAIL;
         }
 
-        firstNic.connect(clickedPos, clickedFace, this.cableType);
-        clickedNic.connect(firstPos, firstFace, this.cableType);
+        firstNic.connect(clickedPos, receiver.getInterfaceName(clickedFace), clickedFace, this.cableType);
+        clickedNic.connect(firstPos, firstReceiver.getInterfaceName(firstFace), firstFace, this.cableType);
 
 
         firstReceiver.sync();

@@ -6,8 +6,9 @@ Cognome: Guidetti
 Data: 12/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
-import net.minecraft.core.Direction;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
 
 /**
  *
@@ -15,7 +16,7 @@ import net.minecraft.core.Direction;
  */
 public interface L3Engine
 {
-    void processPacket(Ipv4Packet packet, Direction from, NetworkStack stack);
+    void processPacket(Ipv4Packet packet, String from, NetworkStack stack);
 
-    void sendPacket(Ipv4Packet packet, NetworkStack stack);
+    void sendPacket(Ipv4Address destIp, NetworkPayload payload, NetworkStack stack);
 }

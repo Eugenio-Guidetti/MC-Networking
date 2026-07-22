@@ -37,8 +37,10 @@ public class ModItalianLangProvider extends FabricLanguageProvider
 
         // --- Item tooltips ---
         translationBuilder.add("tooltip.mcnetworking.cable", "§7§nClick destro§r§7 per selezionare la prima interfaccia");
-        translationBuilder.add("tooltip.mcnetworking.cable.pending_connection", "§7§nClick destro§r§7 per selezionare la seconda interfaccia");
-        translationBuilder.add("tooltip.mcnetworking.cable.pending_connection.cancel", "§7§nShift-Click destro§r§7 per annullare la connessione");
+        translationBuilder.add("tooltip.mcnetworking.cable.pending_connection",
+                               "§7§nClick destro§r§7 per selezionare la seconda interfaccia");
+        translationBuilder.add("tooltip.mcnetworking.cable.pending_connection.cancel",
+                               "§7§nShift-Click destro§r§7 per annullare la connessione");
         translationBuilder.add("tooltip.mcnetworking.cable.pending_connection.first_interface", "§7Prima interfaccia in §o%s, faccia: %s");
 
         // --- Blocks ---

@@ -17,10 +17,9 @@ import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 public class EnableCommand implements TerminalCommand
 {
     @Override
-    public String execute(ConsoleSession session, String[] args)
+    public void execute(ConsoleSession session, String[] args)
     {
         session.setCurrentMode(TerminalMode.PRIV_EXEC);
-        return "";
     }
 
     @Override
@@ -30,7 +29,7 @@ public class EnableCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription()
+    public String getDescription(ConsoleSession session)
     {
         return "Vai alla modalità di configurazione " + TerminalMode.PRIV_EXEC;
     }

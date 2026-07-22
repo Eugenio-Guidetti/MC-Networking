@@ -7,7 +7,6 @@ Data: 12/06/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
-import net.minecraft.core.Direction;
 
 /**
  *
@@ -15,5 +14,5 @@ import net.minecraft.core.Direction;
  */
 public interface L2Engine
 {
-    void processFrame(EthernetFrame frame, Direction from, NetworkStack stack);
+    void processFrame(EthernetFrame frame, String from, NetworkStack stack);
 }

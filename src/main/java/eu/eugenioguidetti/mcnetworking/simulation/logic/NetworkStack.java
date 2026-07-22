@@ -8,9 +8,10 @@ Data: 12/06/2026
 
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
+import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
-import net.minecraft.core.Direction;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -23,11 +24,9 @@ public class NetworkStack
 {
     private final NetworkReceiver networkReceiver;
 
-    // I moduli OSI componibili
     private L2Engine l2Engine = null;
     private L3Engine l3Engine = null;
 
-    // Costruttore flessibile
     public NetworkStack(NetworkReceiver networkReceiver)
     {
         this.networkReceiver = networkReceiver;
@@ -43,7 +42,7 @@ public class NetworkStack
         this.l3Engine = processor;
     }
 
-    public void receiveFrame(@NotNull EthernetFrame frame, @NotNull Direction from)
+    public void receiveFrame(@NotNull EthernetFrame frame, @NotNull String from)
     {
         // La logica base: passa il frame al componente di livello più basso configurato
         if (l2Engine != null)
@@ -66,21 +65,26 @@ public class NetworkStack
         floodFrame(frame, from);
     }
 
-    public void sendFrameOut(EthernetFrame frame, Direction outFace)
+    public void sendFrameOut(EthernetFrame frame, String outName)
     {
-        if (!networkReceiver.getNics().containsKey(outFace))
+        if (!networkReceiver.getNics().containsKey(outName))
         {
             return;
         }
 
-        networkReceiver.getInterface(outFace).sendFrame(frame);
+        networkReceiver.getInterface(outName).sendFrame(frame);
     }
 
-    public void floodFrame(EthernetFrame frame, Direction exceptFace)
+    public void floodFrame(EthernetFrame frame, String exceptNic)
     {
-        for (Map.Entry<Direction, NetworkInterface> entry : networkReceiver.getNics().entrySet())
+        for (Map.Entry<String, NetworkInterface> entry : networkReceiver.getNics().entrySet())
         {
-            if (!entry.getKey().equals(exceptFace))
+            if (entry.getValue().isLoopback())
+            {
+                continue;
+            }
+
+            if (!entry.getKey().equals(exceptNic))
             {
                 entry.getValue().sendFrame(frame.copy());
             }
@@ -88,7 +92,7 @@ public class NetworkStack
     }
 
 
-    public void receivePacket(Ipv4Packet packet, Direction from)
+    public void receivePacket(Ipv4Packet packet, String from)
     {
         if (l3Engine != null)
         {
@@ -96,11 +100,11 @@ public class NetworkStack
         }
     }
 
-    public void sendPacket(Ipv4Packet packet)
+    public void sendPacket(Ipv4Address destIp, NetworkPayload payload)
     {
         if (l3Engine != null)
         {
-            l3Engine.sendPacket(packet, this);
+            l3Engine.sendPacket(destIp, payload, this);
         }
     }
 

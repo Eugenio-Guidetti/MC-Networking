@@ -6,6 +6,8 @@ Cognome: Guidetti
 Data: 31/05/2026
  */
 
+import com.mojang.blaze3d.IndexType;
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
@@ -29,12 +31,11 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import org.joml.Matrix4f;
-import org.joml.Matrix4fc;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
+import org.joml.*;
 import org.lwjgl.system.MemoryUtil;
 
+import java.lang.Math;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -59,6 +60,10 @@ public class CablesRenderPipeline implements ClientModInitializer
     private static CablesRenderPipeline instance;
     private BufferBuilder buffer;
     private MappableRingBuffer vertexBuffer;
+    // 26.2: VertexFormat#uploadImmediateIndexBuffer è stato rimosso, quindi ora gestiamo
+    // anche il buffer degli indici (ordinati per la trasparenza) manualmente, con lo stesso
+    // meccanismo di ring buffer già usato per i vertici.
+    private MappableRingBuffer indexBuffer;
 
     // :::custom-pipelines:drawing-phase
     public static CablesRenderPipeline getInstance()
@@ -120,43 +125,46 @@ public class CablesRenderPipeline implements ClientModInitializer
         activeCables.clear();
     }
 
-    private static void draw(Minecraft client,
-                             RenderPipeline pipeline,
-                             MeshData builtBuffer,
-                             MeshData.DrawState drawParameters,
-                             GpuBuffer vertices,
-                             VertexFormat format)
+    private void draw(Minecraft client,
+                      RenderPipeline pipeline,
+                      MeshData builtBuffer,
+                      MeshData.DrawState drawParameters,
+                      GpuBuffer vertices,
+                      VertexFormat format)
     {
         GpuBuffer indices;
-        VertexFormat.IndexType indexType;
+        IndexType indexType;
 
-        if (pipeline.getVertexFormatMode() == VertexFormat.Mode.QUADS)
+        if (pipeline.getPrimitiveTopology() == PrimitiveTopology.QUADS)
         {
             // Sort the quads if there is translucency
             builtBuffer.sortQuads(ALLOCATOR, RenderSystem.getProjectionType().vertexSorting());
-            // Upload the index buffer
-            indices = pipeline.getVertexFormat().uploadImmediateIndexBuffer(builtBuffer.indexBuffer());
+            // In 26.2 pipeline.getVertexFormat().uploadImmediateIndexBuffer(...) non esiste più:
+            // carichiamo noi l'indice ordinato in un GpuBuffer dedicato (vedi uploadIndices sotto).
+            indices = this.uploadIndices(builtBuffer.indexBuffer());
             indexType = builtBuffer.drawState().indexType();
         }
         else
         {
             // Use the general shape index buffer for non-quad draw modes
-            RenderSystem.AutoStorageIndexBuffer shapeIndexBuffer = RenderSystem.getSequentialBuffer(pipeline.getVertexFormatMode());
+            RenderSystem.AutoStorageIndexBuffer shapeIndexBuffer = RenderSystem.getSequentialBuffer(pipeline.getPrimitiveTopology());
             indices = shapeIndexBuffer.getBuffer(drawParameters.indexCount());
             indexType = shapeIndexBuffer.type();
         }
 
+        int vertexBufferSize = drawParameters.vertexCount() * format.getVertexSize();
+
         // Actually execute the draw
         GpuBufferSlice dynamicTransforms = RenderSystem
                 .getDynamicUniforms()
-                .writeTransform(RenderSystem.getModelViewMatrix(), COLOR_MODULATOR, MODEL_OFFSET, TEXTURE_MATRIX);
+                .writeTransform(RenderSystem.getModelViewMatrixCopy(), COLOR_MODULATOR, MODEL_OFFSET, TEXTURE_MATRIX);
         try (RenderPass renderPass = RenderSystem
                 .getDevice()
                 .createCommandEncoder()
                 .createRenderPass(() -> MCNetworking.MOD_ID + " cables render pipeline rendering",
-                                  client.getMainRenderTarget().getColorTextureView(),
-                                  OptionalInt.empty(),
-                                  client.getMainRenderTarget().getDepthTextureView(),
+                                  client.gameRenderer.mainRenderTarget().getColorTextureView(),
+                                  Optional.<Vector4fc>empty(),
+                                  client.gameRenderer.mainRenderTarget().getDepthTextureView(),
                                   OptionalDouble.empty()))
         {
             renderPass.setPipeline(pipeline);
@@ -168,12 +176,14 @@ public class CablesRenderPipeline implements ClientModInitializer
             // Sampler0 is used for texture inputs in vertices
             // renderPass.bindTexture("Sampler0", textureSetup.texure0(), textureSetup.sampler0());
 
-            renderPass.setVertexBuffer(0, vertices);
+            // setVertexBuffer ora vuole una GpuBufferSlice, non più una GpuBuffer "grezza"
+            renderPass.setVertexBuffer(0, vertices.slice(0, vertexBufferSize));
             renderPass.setIndexBuffer(indices, indexType);
 
-            // The base vertex is the starting index when we copied the data into the vertex buffer divided by vertex size
-            //noinspection ConstantValue
-            renderPass.drawIndexed(0 / format.getVertexSize(), 0, drawParameters.indexCount(), 1);
+            // drawIndexed in 26.2 ha un nuovo ordine dei parametri:
+            // (indexCount, instanceCount, firstIndex, baseVertex, firstInstance).
+            // baseVertex resta 0 perché i vertici vengono sempre caricati dall'inizio della slice.
+            renderPass.drawIndexed(drawParameters.indexCount(), 1, 0, 0, 0);
         }
 
         builtBuffer.close();
@@ -221,7 +231,7 @@ public class CablesRenderPipeline implements ClientModInitializer
 
         if (this.buffer == null)
         {
-            this.buffer = new BufferBuilder(ALLOCATOR, VertexFormat.Mode.QUADS, CABLES_PIPELINE.getVertexFormat());
+            this.buffer = new BufferBuilder(ALLOCATOR, PrimitiveTopology.QUADS, CABLES_PIPELINE.getVertexFormatBinding(0));
         }
 
         Matrix4fc positionMatrix = matrices.last().pose();
@@ -349,10 +359,14 @@ public class CablesRenderPipeline implements ClientModInitializer
 
         GpuBuffer vertices = this.upload(drawParameters, format, builtBuffer);
 
-        draw(client, pipeline, builtBuffer, drawParameters, vertices, format);
+        this.draw(client, pipeline, builtBuffer, drawParameters, vertices, format);
 
-        // Rotate the vertex buffer so we are less likely to use buffers that the GPU is using
+        // Rotate the vertex/index buffers so we are less likely to use buffers that the GPU is using
         this.vertexBuffer.rotate();
+        if (this.indexBuffer != null)
+        {
+            this.indexBuffer.rotate();
+        }
         this.buffer = null;
     }
 
@@ -369,7 +383,7 @@ public class CablesRenderPipeline implements ClientModInitializer
                 this.vertexBuffer.close();
             }
 
-            this.vertexBuffer = new MappableRingBuffer(() -> MCNetworking.MOD_ID + " example render pipeline",
+            this.vertexBuffer = new MappableRingBuffer(() -> MCNetworking.MOD_ID + " cables render pipeline",
                                                        GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_MAP_WRITE,
                                                        vertexBufferSize);
         }
@@ -377,16 +391,46 @@ public class CablesRenderPipeline implements ClientModInitializer
         // Copy vertex data into the vertex buffer
         CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
-        try (GpuBuffer.MappedView mappedView = commandEncoder.mapBuffer(this.vertexBuffer
-                                                                                .currentBuffer()
-                                                                                .slice(0, builtBuffer.vertexBuffer().remaining()),
-                                                                        false,
-                                                                        true))
+        // 26.2: CommandEncoder#mapBuffer è stato rimosso, la mappatura si chiama ora sulla slice stessa
+        try (GpuBufferSlice.MappedView mappedView = this.vertexBuffer
+                .currentBuffer()
+                .slice(0, builtBuffer.vertexBuffer().remaining())
+                .map(false, true))
         {
             MemoryUtil.memCopy(builtBuffer.vertexBuffer(), mappedView.data());
         }
 
         return this.vertexBuffer.currentBuffer();
+    }
+
+    // Nuovo metodo richiesto dalla 26.2: prima questo lavoro lo faceva
+    // pipeline.getVertexFormat().uploadImmediateIndexBuffer(...), rimosso in questa versione.
+    // Carichiamo quindi a mano l'indice (già ordinato per la trasparenza da sortQuads) in un
+    // ring buffer dedicato, con lo stesso identico procedimento usato sopra per i vertici.
+    private GpuBuffer uploadIndices(ByteBuffer indexData)
+    {
+        int indexBufferSize = indexData.remaining();
+
+        if (this.indexBuffer == null || this.indexBuffer.size() < indexBufferSize)
+        {
+            if (this.indexBuffer != null)
+            {
+                this.indexBuffer.close();
+            }
+
+            this.indexBuffer = new MappableRingBuffer(() -> MCNetworking.MOD_ID + " cables index buffer",
+                                                      GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_MAP_WRITE,
+                                                      indexBufferSize);
+        }
+
+        CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+
+        try (GpuBufferSlice.MappedView mappedView = this.indexBuffer.currentBuffer().slice(0, indexData.remaining()).map(false, true))
+        {
+            MemoryUtil.memCopy(indexData, mappedView.data());
+        }
+
+        return this.indexBuffer.currentBuffer();
     }
 
     public void close()
@@ -397,6 +441,12 @@ public class CablesRenderPipeline implements ClientModInitializer
         {
             this.vertexBuffer.close();
             this.vertexBuffer = null;
+        }
+
+        if (this.indexBuffer != null)
+        {
+            this.indexBuffer.close();
+            this.indexBuffer = null;
         }
     }
 
