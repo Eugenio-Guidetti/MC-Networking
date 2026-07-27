@@ -23,12 +23,13 @@ import net.minecraft.util.ARGB;
  */
 public class EndDeviceL2Engine implements L2Engine
 {
-    NetworkingBlockEntity netEntity;
+    private final NetworkingBlockEntity netEntity;
 
-    public void setNetEntity(NetworkingBlockEntity netEntity)
+    public EndDeviceL2Engine(NetworkingBlockEntity netEntity)
     {
         this.netEntity = netEntity;
     }
+
 
     @Override
     public void processFrame(EthernetFrame frame, String from, NetworkStack stack)
@@ -56,8 +57,11 @@ public class EndDeviceL2Engine implements L2Engine
 
         int color = 0;
 
-        // Il frame non è rivolto all'end device
-        if (!frame.destMac().equals(interfaceMac) && !frame.destMac().equals(MacAddress.BROADCAST))
+        if (frame.destMac().equals(MacAddress.BROADCAST))
+        {
+            color = ARGB.color(255, 127, 0); // Giallo
+        }
+        else if (!frame.destMac().equals(interfaceMac))
         {
             color = ARGB.color(255, 0, 0); // Rosso
         }

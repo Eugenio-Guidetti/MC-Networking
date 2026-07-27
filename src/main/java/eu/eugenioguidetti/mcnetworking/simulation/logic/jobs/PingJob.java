@@ -49,12 +49,12 @@ public class PingJob implements Job
 
         if (timerTicks <= 0)
         {
+            ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
+            session.sendOutput("Invio ping, rimanenti: " + remainingResends);
+
             host.triggerSendPacket(destIp, new ApplicationPayload(message));
             remainingResends--;
             timerTicks = INTERVAL_TICKS; // Reimposta il timer per il pacchetto successivo
-
-            ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-            session.sendOutput("Invio ping, rimanenti: " + remainingResends);
         }
         else
         {

@@ -26,14 +26,13 @@ import java.util.Map;
  */
 public class RouterBlockEntity extends NetworkingBlockEntity
 {
-    private final RoutingL3Engine l3Engine = new RoutingL3Engine();
+    private final RoutingL3Engine l3Engine = new RoutingL3Engine(this);
 
     public RouterBlockEntity(BlockPos pos, BlockState blockState)
     {
         super(ModBlockEntities.ROUTER_BLOCK_ENTITY, pos, blockState);
 
         this.stack.setL3Engine(l3Engine);
-        l3Engine.setNetEntity(this);
 
         hostname = "Router";
 

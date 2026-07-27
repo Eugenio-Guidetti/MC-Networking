@@ -31,8 +31,8 @@ import java.util.Map;
  */
 public class HostBlockEntity extends NetworkingBlockEntity
 {
-    private final EndDeviceL2Engine l2Engine = new EndDeviceL2Engine();
-    private final EndDeviceL3Engine l3Engine = new EndDeviceL3Engine();
+    private final EndDeviceL2Engine l2Engine = new EndDeviceL2Engine(this);
+    private final EndDeviceL3Engine l3Engine = new EndDeviceL3Engine(this);
 
     @Nullable
     private Ipv4Address dnsServer = null;
@@ -43,9 +43,6 @@ public class HostBlockEntity extends NetworkingBlockEntity
 
         this.stack.setL2Engine(l2Engine);
         this.stack.setL3Engine(l3Engine);
-
-        l2Engine.setNetEntity(this);
-        l3Engine.setNetEntity(this);
 
         hostname = "Host";
 

@@ -8,43 +8,27 @@ Data: 12/06/2026
 
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
-import eu.eugenioguidetti.mcnetworking.simulation.logic.L3Engine;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.AbstractL3Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.NetworkStack;
-import eu.eugenioguidetti.mcnetworking.simulation.logic.protocol.ArpManager;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
-import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ArpPayload;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 
 /**
  *
  * @author Eugenio Guidetti
  */
-public class EndDeviceL3Engine implements L3Engine
+public class EndDeviceL3Engine extends AbstractL3Engine
 {
-    private final ArpManager arpManager = new ArpManager();
     private Ipv4Address defaultGateway = null;
 
-    // Serve solo a mostrare i messaggi nella chat di gioco
-    NetworkingBlockEntity netEntity;
-    public void setNetEntity(NetworkingBlockEntity netEntity)
+    public EndDeviceL3Engine(NetworkingBlockEntity netEntity)
     {
-        this.netEntity = netEntity;
+        super(netEntity);
     }
-    private void processChatMessage(NetworkStack stack, Ipv4Packet packet)
-    {
-        String message = "§a" + stack.getNetworkReceiver().getHostname() + ": Ricevuto: " + packet.payload().toString();
-
-        ServerLevel serverLevel = (ServerLevel) netEntity.getLevel();
-        serverLevel.getServer().getPlayerList().broadcastSystemMessage(Component.literal(message), false);
-    }
-
 
     @Override
     public void processPacket(Ipv4Packet packet, String from, NetworkStack stack)
@@ -61,12 +45,10 @@ public class EndDeviceL3Engine implements L3Engine
         {
             return;
         }
-        if (broadcast)
+
+        if (broadcast && isInvalidBroadcast(packet, interfaceIp))
         {
-            if (!packet.sourceIp().contieneIp(interfaceIp) && !packet.sourceIp().equals(Ipv4Address.ALL_ZEROS))
-            {
-                return;
-            }
+            return;
         }
 
         NetworkPayload payload = packet.payload();
@@ -77,7 +59,7 @@ public class EndDeviceL3Engine implements L3Engine
             return;
         }
 
-        processChatMessage(stack, packet);
+        processChatMessage(packet, from, stack);
 
         // ... logica per ICMP, TCP, UDP, ecc.
 
@@ -86,6 +68,8 @@ public class EndDeviceL3Engine implements L3Engine
     @Override
     public void sendPacket(Ipv4Address destIp, NetworkPayload payload, NetworkStack stack)
     {
+        // Determino interfaccia di uscita e nextHop del pacchetto
+
         String outName = null;
         Ipv4Address nextHop = null;
 
@@ -96,103 +80,43 @@ public class EndDeviceL3Engine implements L3Engine
         }
         else
         {
-            for (var entry : stack.getNetworkReceiver().getNics().entrySet())
+            // Controllo se il destinatario è in una rete direttamente connessa a me
+            outName = getOutName(destIp, stack);
+
+            if (outName != null)
             {
-                if (entry.getKey().equals(NetworkInterface.LOOPBACK_NAME))
-                {
-                    continue;
-                }
-
-                // Interfaccia non configurata
-                if (entry.getValue().getIpAddress().equals(Ipv4Address.ALL_ZEROS))
-                {
-                    continue;
-                }
-
-                if (entry.getValue().getIpAddress().contieneIp(destIp))
-                {
-                    // Rete di destinazione direttamente connessa
-                    outName = entry.getKey();
-                    nextHop = destIp;
-
-                    break;
-                }
+                // Rete di destinazione direttamente connessa
+                nextHop = destIp;
             }
-            try
+            else
             {
+                // Inoltro al default gateway
+
+                if (defaultGateway == null)
+                {
+                    // Nessun gateway configurato
+
+                    ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
+                    session.sendError("Destination Host Unreachable");
+                    return;
+                }
+
+                outName = getOutName(defaultGateway, stack);
+
                 if (outName == null)
                 {
-                    if (defaultGateway == null)
-                    {
-                        // Destination Host Unreachable (nessun gateway configurato)
-                        throw new RuntimeException("Destination Host Unreachable");
-                    }
+                    // La rete del default gateway non è direttamente collegata a me
 
-                    for (var entry : stack.getNetworkReceiver().getNics().entrySet())
-                    {
-                        if (entry.getKey().equals(NetworkInterface.LOOPBACK_NAME))
-                        {
-                            continue;
-                        }
-
-                        // Interfaccia non configurata
-                        if (entry.getValue().getIpAddress().equals(Ipv4Address.ALL_ZEROS))
-                        {
-                            continue;
-                        }
-
-                        if (entry.getValue().getIpAddress().contieneIp(defaultGateway))
-                        {
-                            // Rete di destinazione direttamente connessa
-                            outName = entry.getKey();
-                            nextHop = defaultGateway;
-                        }
-                    }
+                    ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
+                    session.sendError("Default gateway non raggiungibile");
+                    return;
                 }
-                if (outName == null)
-                {
-                    throw new RuntimeException("Nessuna interfaccia trovata");
-                }
-            }
-            catch (RuntimeException e)
-            {
-                ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-                session.sendError(e.getMessage(), e);
-                return;
+
+                nextHop = defaultGateway;
             }
         }
 
-        NetworkInterface outNic = stack.getNetworkReceiver().getInterface(outName);
-        Ipv4Address outIp = outNic.getIpAddress();
-
-        Ipv4Packet packet = new Ipv4Packet(outIp, destIp, payload);
-
-        if (nextHop.equals(outIp) || nextHop.isIndirizzoDiLoopback())
-        {
-            // "Invio" il pacchetto a me stesso
-            processPacket(packet, outName, stack);
-
-            return;
-        }
-
-        MacAddress targetMac;
-        if (destIp.isIndirizzoDiBroadcast(nextHop.getLunghezzaPrefisso()))
-        {
-            targetMac = MacAddress.BROADCAST;
-        }
-        else
-        {
-            targetMac = arpManager.resolveMac(nextHop);
-        }
-
-        if (targetMac == null)
-        {
-            arpManager.enqueuePacket(packet, nextHop, outName, stack);
-            return;
-        }
-
-        EthernetFrame frame = new EthernetFrame(outNic.getMacAddress(), targetMac, packet);
-        stack.sendFrameOut(frame, outName);
+        sendPacketOut(destIp, payload, nextHop, outName, stack);
     }
 
     public Ipv4Address getDefaultGateway()
@@ -203,10 +127,5 @@ public class EndDeviceL3Engine implements L3Engine
     public void setDefaultGateway(Ipv4Address defaultGateway)
     {
         this.defaultGateway = defaultGateway;
-    }
-
-    public ArpManager getArpManager()
-    {
-        return arpManager;
     }
 }

@@ -17,6 +17,7 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -57,32 +58,39 @@ public class TerminalScreen extends Screen
     protected void init()
     {
         super.init();
-        String inputFieldText = "";
 
-        if (this.inputField != null)
+        int promptWidth = this.font.width(currentPrompt);
+        int inputFieldX = 10 + promptWidth;
+        int inputFieldY = this.height - 20;
+        int inputFieldWidth = this.width - 20 - promptWidth;
+        int inputFieldHeight = 12;
+
+        if (this.inputField == null)
         {
-            inputFieldText = this.inputField.getValue();
-            this.removeWidget(this.inputField);
+            this.inputField = new EditBox(this.font, inputFieldX, inputFieldY, inputFieldWidth, inputFieldHeight, Component.empty());
+        }
+        else
+        {
+            this.inputField.setX(inputFieldX);
+            this.inputField.setWidth(inputFieldWidth);
         }
 
-        // Calcoliamo la larghezza del prompt per spostare l'input
-        int promptWidth = this.font.width(currentPrompt);
-
-        // Creiamo la casella di testo in basso.
-        // Nota: spostiamo la X iniziale di 'promptWidth' verso destra e riduciamo la larghezza totale.
-        this.inputField = new EditBox(this.font, 10 + promptWidth, this.height - 20, this.width - 20 - promptWidth, 12, Component.empty());
         this.inputField.setMaxLength(256);
-        this.inputField.setBordered(false); // Rimuove il bordo standard di Minecraft per un look da terminale
-        this.inputField.setTextColor(GREEN); // Testo verde
-        this.inputField.setValue(inputFieldText);
+        this.inputField.setBordered(false);
+        this.inputField.setTextColor(GREEN);
 
         this.addRenderableWidget(this.inputField);
         this.setInitialFocus(this.inputField);
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a)
+    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a)
     {
+        if (this.getFocused() == null)
+        {
+            this.setFocused(this.inputField);
+        }
+
         // 1. Sfondo completamente nero (usiamo graphics al posto del vecchio guiGraphics)
         graphics.fill(0, 0, this.width, this.height, BACKGROUND);
 
@@ -113,7 +121,7 @@ public class TerminalScreen extends Screen
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event)
+    public boolean keyPressed(@NonNull KeyEvent event)
     {
         if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER)
         {
@@ -266,7 +274,7 @@ public class TerminalScreen extends Screen
     }
 
     // Metodo chiamato quando ricevo un pacchetto S2C dal server
-    public void addOutput(String output, String newPrompt, GlobalPos globalPos)
+    public void addOutput(String output, String newPrompt, @NonNull GlobalPos globalPos)
     {
         GlobalPos terminalPos = GlobalPos.of(this.level.dimension(), this.pos);
         if (!globalPos.equals(terminalPos))
@@ -296,7 +304,7 @@ public class TerminalScreen extends Screen
         this.init();
     }
 
-    private List<FormattedCharSequence> getVisualLines()
+    private @NonNull List<FormattedCharSequence> getVisualLines()
     {
         List<FormattedCharSequence> visualLines = new ArrayList<>();
         // Calcoliamo la larghezza massima disponibile per il testo (es. larghezza schermo meno 20 pixel di margini)
