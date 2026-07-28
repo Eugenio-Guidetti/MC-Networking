@@ -7,14 +7,19 @@ Data: 04/06/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
+import eu.eugenioguidetti.mcnetworking.item.ModItems;
+import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
 import eu.eugenioguidetti.mcnetworking.terminal.packet.OpenTerminalS2CPacket;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -55,20 +60,43 @@ public abstract class NetworkingBlock extends BaseEntityBlock
     }
 
     @Override
+    protected InteractionResult useItemOn(ItemStack itemStack,
+                                          BlockState state,
+                                          Level level,
+                                          BlockPos pos,
+                                          Player player,
+                                          InteractionHand hand,
+                                          BlockHitResult hitResult)
+    {
+        if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer))
+        {
+            return InteractionResult.SUCCESS;
+        }
+
+        if (itemStack.getItem().equals(ModItems.SCISSORS))
+        {
+            if (!(level.getBlockEntity(pos) instanceof NetworkReceiver receiver))
+            {
+                return InteractionResult.PASS;
+            }
+
+            Direction face = hitResult.getDirection();
+
+            receiver.disconnectPhysical(face);
+
+            return InteractionResult.CONSUME;
+        }
+
+        return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+    }
+
+    @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult)
     {
         if (!player.getMainHandItem().isEmpty())
         {
             return InteractionResult.PASS;
         }
-
-        // Apri terminale solo se il giocatore ha in mano un item specifico
-        /*
-        if (!(player.getMainHandItem().getItem() instanceof CableItem))
-        {
-            return InteractionResult.PASS;
-        }
-        */
 
         // Il client qua non fa niente. Apre la UI quando glie lo dice il server
         if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer))

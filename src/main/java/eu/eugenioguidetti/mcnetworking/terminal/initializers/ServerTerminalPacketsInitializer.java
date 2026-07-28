@@ -13,9 +13,12 @@ import eu.eugenioguidetti.mcnetworking.terminal.packet.TerminalCommandC2SPacket;
 import eu.eugenioguidetti.mcnetworking.terminal.packet.TerminalOutputS2CPacket;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  *
@@ -42,13 +45,33 @@ public class ServerTerminalPacketsInitializer implements ModInitializer
                                          BlockPos pos = payload.pos();
                                          ServerLevel level = context.player().level();
 
+                                         GlobalPos globalPos = GlobalPos.of(level.dimension(), pos);
+
                                          String rawCommand = payload.command();
 
-                                         // 1. Recupera la sessione del giocatore (o creala se è il primo comando) dalla cache sul server
+                                         // Recupera la sessione del giocatore (o creala se è il primo comando) dalla cache sul server
                                          TerminalCache.CacheValue cached = TerminalCache.getOrCreateSession(level, pos);
-                                         TerminalCache.addLine(level, pos, cached.session().getPrompt() + rawCommand);
 
-                                         // 2. Fai processare il comando al Registry
+                                         String prompt = cached.session().getPrompt();
+                                         String line = prompt + rawCommand;
+
+                                         TerminalCache.addLine(level, pos, line);
+
+                                         // Invia il comando ricevuto agli altri client
+                                         for (ServerPlayer player : PlayerLookup.around(level, pos, 16))
+                                         {
+                                             if (player.equals(context.player()))
+                                             {
+                                                 continue;
+                                             }
+
+                                             ServerPlayNetworking.send(player,
+                                                                       new TerminalOutputS2CPacket(line,
+                                                                                                   cached.session().getPrompt(),
+                                                                                                   globalPos));
+                                         }
+
+                                         // Fai processare il comando al Registry
                                          commands.parseInput(cached.session(), rawCommand);
                                      });
         });

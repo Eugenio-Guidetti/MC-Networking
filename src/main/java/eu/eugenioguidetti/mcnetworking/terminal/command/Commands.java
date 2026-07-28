@@ -10,7 +10,6 @@ import eu.eugenioguidetti.mcnetworking.terminal.command.globalConfig.HostnameCom
 import eu.eugenioguidetti.mcnetworking.terminal.command.interfaceConfig.InterfaceCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.interfaceConfig.IpCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.privExec.ConfigureTerminalCommand;
-import eu.eugenioguidetti.mcnetworking.terminal.command.privExec.PingCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.userExec.EnableCommand;
 
 /**

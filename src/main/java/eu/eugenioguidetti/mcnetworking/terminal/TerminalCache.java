@@ -25,8 +25,9 @@ import java.util.Map;
  */
 public class TerminalCache
 {
+    // Cache server-side
+
     private static final int MAX_LINES = 150;
-    // Mappa che associa le coordinate del blocco (e dimensione) e al giocatore al suo storico e sessione
     private static final Map<GlobalPos, CacheValue> cache = new HashMap<>();
 
     public static CacheValue getOrCreateSession(NetworkingBlockEntity entity)

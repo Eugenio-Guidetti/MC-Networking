@@ -34,6 +34,7 @@ public class ModItalianLangProvider extends FabricLanguageProvider
         translationBuilder.add(ModItems.COPPER_STRAIGHT_CABLE, "Cavo di Rame Straight");
         translationBuilder.add(ModItems.COPPER_CROSSOVER_CABLE, "Cavo di Rame Crossover");
         translationBuilder.add(ModItems.FIBER_OPTIC_CABLE, "Cavo in Fibra Ottica");
+        translationBuilder.add(ModItems.SCISSORS, "Forbici");
 
         // --- Item tooltips ---
         translationBuilder.add("tooltip.mcnetworking.cable", "§7§nClick destro§r§7 per selezionare la prima interfaccia");

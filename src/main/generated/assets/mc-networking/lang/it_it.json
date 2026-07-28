@@ -2,6 +2,7 @@
   "item.mc-networking.copper_crossover_cable": "Cavo di Rame Crossover",
   "item.mc-networking.copper_straight_cable": "Cavo di Rame Straight",
   "item.mc-networking.fiber_optic_cable": "Cavo in Fibra Ottica",
+  "item.mc-networking.scissors": "Forbici",
   "itemGroup.mc-networking.cables": "MCNetworking: Cavi",
   "itemGroup.mc-networking.end_devices": "MCNetworking: Dispositivi Finali",
   "itemGroup.mc-networking.network_devices": "MCNetworking: Dispositivi di Rete",

@@ -86,7 +86,8 @@ public class EndDeviceL3Engine extends AbstractL3Engine
             if (outName != null)
             {
                 // Rete di destinazione direttamente connessa
-                nextHop = destIp;
+                int lunghezzaPrefisso = stack.getNetworkReceiver().getInterface(outName).getIpAddress().getLunghezzaPrefisso();
+                nextHop = new Ipv4Address(destIp.getIp(), lunghezzaPrefisso);
             }
             else
             {

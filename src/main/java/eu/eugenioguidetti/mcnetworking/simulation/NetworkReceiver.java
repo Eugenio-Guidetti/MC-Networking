@@ -34,6 +34,8 @@ public interface NetworkReceiver
 
     Map<String, NetworkInterface> getNics();
 
+    void disconnectPhysical(Direction face);
+
     void disconnectAllPhysical();
 
     void sync();

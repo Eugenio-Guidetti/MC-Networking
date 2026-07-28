@@ -26,8 +26,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MappableRingBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -71,12 +71,17 @@ public class CablesRenderPipeline implements ClientModInitializer
         return instance;
     }
 
-    public static void addCable(@NotNull BlockPos startPos,
+    public static void addCable(@NotNull GlobalPos startPos,
                                 @NotNull Direction startFace,
-                                @NotNull BlockPos targetPos,
+                                @NotNull GlobalPos targetPos,
                                 @NotNull Direction targetFace,
                                 @NotNull CableType type)
     {
+        if (!startPos.dimension().equals(targetPos.dimension()))
+        {
+            throw new IllegalStateException("Non puoi aggiungere un cavo tra dimensioni diverse");
+        }
+
         // Generiamo la chiave usando le coordinate e la faccia di partenza
         CableKey key = new CableKey(startPos, startFace);
 
@@ -86,8 +91,8 @@ public class CablesRenderPipeline implements ClientModInitializer
         }
 
         // Calcoliamo i punti reali 3D del cavo
-        Vec3 pointA = Utils.getInterfaceCenterPoint(startPos, startFace);
-        Vec3 pointB = Utils.getInterfaceCenterPoint(targetPos, targetFace);
+        Vec3 pointA = Utils.getInterfaceCenterPoint(startPos.pos(), startFace);
+        Vec3 pointB = Utils.getInterfaceCenterPoint(targetPos.pos(), targetFace);
 
         // Estraiamo il colore dal tipo di cavo
         float r = type.getRed() / 255f;
@@ -98,7 +103,7 @@ public class CablesRenderPipeline implements ClientModInitializer
 
         // Ordina i due punti: indipendentemente da chi chiama addCable,
         // la coppia di punti sarà sempre nello stesso ordine.
-        boolean swap = startPos.compareTo(targetPos) > 0;
+        boolean swap = startPos.pos().compareTo(targetPos.pos()) > 0;
         Vec3 renderA = swap ? pointB : pointA;
         Vec3 renderB = swap ? pointA : pointB;
 
@@ -108,14 +113,14 @@ public class CablesRenderPipeline implements ClientModInitializer
         activeCables.put(key, state);
     }
 
-    public static void removeCable(@NotNull BlockPos pos, @NotNull Direction face)
+    public static void removeCable(@NotNull GlobalPos pos, @NotNull Direction face)
     {
         CableKey key = new CableKey(pos, face);
         CableRenderState state = activeCables.get(key);
         activeCables.values().removeIf(value -> value.equals(state));
     }
 
-    public static void removeCablesFromBlock(@NotNull BlockPos pos)
+    public static void removeCablesFromBlock(@NotNull GlobalPos pos)
     {
         activeCables.keySet().removeIf(key -> key.pos().equals(pos));
     }
@@ -203,7 +208,15 @@ public class CablesRenderPipeline implements ClientModInitializer
     private void extractCables(LevelExtractionContext context)
     {
         extractedCableStates.clear();
-        extractedCableStates.addAll(activeCables.values());
+        for (var entry : activeCables.entrySet())
+        {
+            if (!entry.getKey().pos().dimension().equals(context.level().dimension()))
+            {
+                continue;
+            }
+
+            extractedCableStates.add(entry.getValue());
+        }
     }
 
     // :::custom-pipelines:drawing-phase
@@ -456,7 +469,7 @@ public class CablesRenderPipeline implements ClientModInitializer
     }
 
     // Un cavo è identificato univocamente dalla porta (Blocco + Faccia) da cui parte.
-    public record CableKey(BlockPos pos, Direction face)
+    public record CableKey(GlobalPos pos, Direction face)
     {
     }
 }

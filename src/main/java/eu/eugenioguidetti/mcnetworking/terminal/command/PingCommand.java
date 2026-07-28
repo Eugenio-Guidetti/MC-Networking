@@ -1,4 +1,4 @@
-package eu.eugenioguidetti.mcnetworking.terminal.command.privExec;
+package eu.eugenioguidetti.mcnetworking.terminal.command;
 
 /*
 Nome: Eugenio
@@ -10,7 +10,7 @@ import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.PingJob;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
-import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
+import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 
 /**
  *
@@ -53,12 +53,12 @@ public class PingCommand implements TerminalCommand
             return false;
         }
 
-        return true;
+        return !session.getCurrentMode().equals(TerminalMode.USER_EXEC);
     }
 
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Invia messaggi di ping (non ancora pacchetti ICMP) ad un altro host";
+        return "Invia messaggi di ping (non ancora pacchetti ICMP) ad un altro host.\nUso: ping [dest_ip] [message] [<resends>]";
     }
 }

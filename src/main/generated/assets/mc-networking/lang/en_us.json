@@ -6,6 +6,7 @@
   "item.mc-networking.copper_crossover_cable": "Copper Crossover Cable",
   "item.mc-networking.copper_straight_cable": "Copper Straight Cable",
   "item.mc-networking.fiber_optic_cable": "Fiber Optic Cable",
+  "item.mc-networking.scissors": "Scissors",
   "itemGroup.mc-networking.cables": "MCNetworking: Cables",
   "itemGroup.mc-networking.end_devices": "MCNetworking: End Devices",
   "itemGroup.mc-networking.network_devices": "MCNetworking: Network Devices",

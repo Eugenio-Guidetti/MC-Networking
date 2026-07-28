@@ -31,6 +31,7 @@ public class ModCreativeModeTabs
                                                                                     output.accept(ModItems.COPPER_STRAIGHT_CABLE);
                                                                                     output.accept(ModItems.COPPER_CROSSOVER_CABLE);
                                                                                     output.accept(ModItems.FIBER_OPTIC_CABLE);
+                                                                                    output.accept(ModItems.SCISSORS);
                                                                                 });
 
     public static final CreativeModeTab END_DEVICES_TAB = registerModCreativeModeTab("end_devices",

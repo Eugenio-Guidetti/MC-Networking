@@ -6,6 +6,7 @@ Cognome: Guidetti
 Data: 07/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
 import eu.eugenioguidetti.mcnetworking.terminal.packet.TerminalCommandC2SPacket;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -17,6 +18,7 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -72,6 +74,7 @@ public class TerminalScreen extends Screen
         else
         {
             this.inputField.setX(inputFieldX);
+            this.inputField.setY(inputFieldY);
             this.inputField.setWidth(inputFieldWidth);
         }
 
@@ -81,6 +84,25 @@ public class TerminalScreen extends Screen
 
         this.addRenderableWidget(this.inputField);
         this.setInitialFocus(this.inputField);
+    }
+
+    // Chiudo la UI se il blocco viene distrutto
+    @Override
+    public void tick()
+    {
+        super.tick();
+
+        if (this.minecraft == null || this.minecraft.level == null)
+        {
+            return;
+        }
+
+        BlockEntity blockEntity = this.minecraft.level.getBlockEntity(this.pos);
+
+        if (!(blockEntity instanceof NetworkReceiver))
+        {
+            this.onClose();
+        }
     }
 
     @Override
@@ -140,7 +162,7 @@ public class TerminalScreen extends Screen
 
             CommandHistoryCache.addCommand(pos, command);
 
-            if (command.equals("clear"))
+            if (command.toLowerCase().startsWith("clear"))
             {
                 history.clear();
                 visualLines.clear();
@@ -288,6 +310,14 @@ public class TerminalScreen extends Screen
             {
                 if (s.isEmpty())
                 {
+                    continue;
+                }
+
+                if (s.replaceFirst(newPrompt, "").toLowerCase().startsWith("clear"))
+                {
+                    history.clear();
+                    visualLines.clear();
+
                     continue;
                 }
 

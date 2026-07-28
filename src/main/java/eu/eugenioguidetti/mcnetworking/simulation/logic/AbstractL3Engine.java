@@ -73,7 +73,6 @@ public abstract class AbstractL3Engine implements L3Engine
 
         Ipv4Packet packet = new Ipv4Packet(outIp, destIp, payload);
 
-
         if (nextHopIp.equals(outIp) || nextHopIp.isIndirizzoDiLoopback())
         {
             // "Invio" il pacchetto a me stesso

@@ -142,6 +142,8 @@ public class CableItem extends Item
 
         if (firstNic.isConnected() || clickedNic.isConnected())
         {
+            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
+
             player.sendSystemMessage(Component.literal("Collegamento annullato: una delle due interfacce è già stata collegata"));
 
             return InteractionResult.FAIL;

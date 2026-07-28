@@ -43,6 +43,7 @@ public class ModModelProvider extends FabricModelProvider
         itemModelGenerators.generateFlatItem(ModItems.COPPER_STRAIGHT_CABLE, ModelTemplates.FLAT_ITEM);
         itemModelGenerators.generateFlatItem(ModItems.COPPER_CROSSOVER_CABLE, ModelTemplates.FLAT_ITEM);
         itemModelGenerators.generateFlatItem(ModItems.FIBER_OPTIC_CABLE, ModelTemplates.FLAT_ITEM);
+        itemModelGenerators.generateFlatItem(ModItems.SCISSORS, ModelTemplates.FLAT_ITEM);
 
 
         // Texture 2D per gli item dei NetworkingBlockEntity

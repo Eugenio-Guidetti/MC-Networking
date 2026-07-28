@@ -24,7 +24,6 @@ import java.util.function.Function;
  */
 public class ModItems
 {
-    // Registriamo 3 oggetti separati, uno per ogni tipo di cavo
     public static final Item COPPER_STRAIGHT_CABLE = registerItem("copper_straight_cable",
                                                                   props -> new CableItem(props, CableType.COPPER_STRAIGHT),
                                                                   new Item.Properties());
@@ -36,6 +35,8 @@ public class ModItems
     public static final Item FIBER_OPTIC_CABLE = registerItem("fiber_optic_cable",
                                                               props -> new CableItem(props, CableType.FIBER_OPTIC),
                                                               new Item.Properties());
+
+    public static final Item SCISSORS = registerItem("scissors", Item::new, new Item.Properties());
 
     public static ResourceKey<Item> getRK(Item item)
     {

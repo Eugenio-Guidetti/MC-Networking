@@ -3,15 +3,16 @@
   "id": "mc-networking",
   "version": "${version}",
   "name": "MC Networking",
-  "description": "",
+  "description": "Mod di Minecraft per simulare reti IP nel gioco",
   "authors": [
     "Eugenio Guidetti"
   ],
   "contact": {
     "homepage": "https://www.eugenioguidetti.eu/progetti/mc-networking/",
-    "sources": "https://github.com/Eugenio-Guidetti/MC-Networking"
+    "sources": "https://github.com/Eugenio-Guidetti/MC-Networking",
+    "issues": "https://github.com/eugenio-guidetti/mc-networking/issues"
   },
-  "license": "MIT-License",
+  "license": "MIT",
   "icon": "assets/mc-networking/icon.png",
   "environment": "*",
   "entrypoints": {

@@ -36,6 +36,7 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add(ModItems.COPPER_STRAIGHT_CABLE, "Copper Straight Cable");
         translationBuilder.add(ModItems.COPPER_CROSSOVER_CABLE, "Copper Crossover Cable");
         translationBuilder.add(ModItems.FIBER_OPTIC_CABLE, "Fiber Optic Cable");
+        translationBuilder.add(ModItems.SCISSORS, "Scissors");
 
         // --- Item tooltips ---
         translationBuilder.add("tooltip.mcnetworking.cable", "§7§nRight click§r§7 to select the first interface");

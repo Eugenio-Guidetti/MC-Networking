@@ -27,7 +27,7 @@ public class ConsoleSession
     private final GlobalPos globalPos;
 
     private final NetworkingBlockEntity device;
-    private TerminalMode currentMode = TerminalMode.GLOBAL_CONFIG;
+    private TerminalMode currentMode = TerminalMode.USER_EXEC;
 
     // Se siamo in (config-if), qui salviamo quale interfaccia stiamo modificando
     private String selectedInterfaceName = null;
@@ -48,7 +48,7 @@ public class ConsoleSession
         TerminalCache.addLine(level, pos, output);
 
         // 3. Spedisci l'output e il prompt aggiornato indietro ai client
-        for (ServerPlayer player : PlayerLookup.level(level))
+        for (ServerPlayer player : PlayerLookup.around(level, pos, 16))
         {
             ServerPlayNetworking.send(player, new TerminalOutputS2CPacket(output, this.getPrompt(), globalPos));
         }

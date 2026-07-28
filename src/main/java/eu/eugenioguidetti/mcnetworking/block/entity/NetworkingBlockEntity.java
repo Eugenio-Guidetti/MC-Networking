@@ -18,6 +18,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
 import eu.eugenioguidetti.mcnetworking.terminal.gui.CommandHistoryCache;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -45,7 +46,7 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     private final Map<String, NetworkInterface> nics = new HashMap<>();
     private final Map<Direction, String> physicalPortsNames = new EnumMap<>(Direction.class);
 
-    private final List<Job> activeJobs = new ArrayList<>();
+    private List<Job> activeJobs = new ArrayList<>();
 
     protected String hostname;
 
@@ -86,17 +87,17 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
                 continue;
             }
 
-            if (nic.isConnected())
+            if (nic.isConnected() && !entity.isRemoved() && entity.getLevel() != null)
             {
-                CablesRenderPipeline.addCable(nic.getPos(),
+                CablesRenderPipeline.addCable(GlobalPos.of(entity.getLevel().dimension(), nic.getPos()),
                                               nic.getDirection(),
-                                              nic.getConnectedTargetPos(),
+                                              GlobalPos.of(entity.getLevel().dimension(), nic.getConnectedTargetPos()),
                                               nic.getConnectedTargetFace(),
                                               nic.getConnectedCableType());
             }
             else
             {
-                CablesRenderPipeline.removeCable(nic.getPos(), nic.getDirection());
+                CablesRenderPipeline.removeCable(GlobalPos.of(level.dimension(), nic.getPos()), nic.getDirection());
             }
         }
     }
@@ -167,6 +168,17 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     }
 
     @Override
+    public void disconnectPhysical(Direction face)
+    {
+        if (this.level == null || this.level.isClientSide() || face == null)
+        {
+            return;
+        }
+
+        disconnectNic(nics.get(getInterfaceName(face)));
+    }
+
+    @Override
     public void disconnectAllPhysical()
     {
         if (this.level == null || this.level.isClientSide())
@@ -180,9 +192,9 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
         }
     }
 
-    private void disconnectNic(@NotNull NetworkInterface nic)
+    private void disconnectNic(NetworkInterface nic)
     {
-        if (!nic.isConnected())
+        if (nic == null || !nic.isConnected())
         {
             return;
         }
@@ -220,12 +232,13 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     }
 
 
-    // --- Metodi minecraft ---
-
     public void startJob(Job job)
     {
         this.activeJobs.add(job);
     }
+
+
+    // --- Metodi minecraft ---
 
     public void tickServer(Level level)
     {
@@ -233,6 +246,9 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
         {
             nic.tick(level);
         }
+
+
+        //MCNetworking.LOGGER.info("activeJobs:" + activeJobs);
 
         // Rimuove automaticamente i job completati (quando tick() restituisce true)
         activeJobs.removeIf(job -> job.tick(this));
@@ -333,6 +349,24 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     }
 
 
+    @Override
+    public void setRemoved()
+    {
+        if (this.level != null)
+        {
+            if (this.level.isClientSide())
+            {
+                CablesRenderPipeline.removeCablesFromBlock(GlobalPos.of(this.level.dimension(), this.getBlockPos()));
+            }
+            else
+            {
+                activeJobs.clear();
+            }
+        }
+
+        super.setRemoved();
+    }
+
     // Blocco distrutto
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state)
@@ -353,7 +387,7 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
 
             if (level.isClientSide())
             {
-                CablesRenderPipeline.removeCablesFromBlock(pos);
+                CablesRenderPipeline.removeCablesFromBlock(GlobalPos.of(this.level.dimension(), pos));
             }
 
             CommandHistoryCache.clearCache(pos);

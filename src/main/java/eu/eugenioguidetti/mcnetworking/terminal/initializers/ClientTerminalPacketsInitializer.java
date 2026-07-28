@@ -6,6 +6,7 @@ Cognome: Guidetti
 Data: 07/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.client.rendering.CablesRenderPipeline;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
 import eu.eugenioguidetti.mcnetworking.terminal.gui.CommandHistoryCache;
 import eu.eugenioguidetti.mcnetworking.terminal.gui.TerminalScreen;
@@ -55,6 +56,7 @@ public class ClientTerminalPacketsInitializer implements ClientModInitializer
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
                                                        {
+                                                           CablesRenderPipeline.clearCables();
                                                            TerminalCache.clearAll();
                                                            CommandHistoryCache.clearAll();
                                                        });
