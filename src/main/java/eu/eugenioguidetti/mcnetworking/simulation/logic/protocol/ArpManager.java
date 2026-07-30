@@ -16,6 +16,7 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -130,7 +131,8 @@ public class ArpManager
             if (entry.getValue().tickDown())
             {
                 ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-                session.sendError("ARP request scaduta: Scartati pacchetti diretti a: " + entry.getKey());
+                session.sendError(String.format(Component.translatable("mcnetworking.cli.arp_request_timeout_format").getString(),
+                                                entry.getKey()));
 
                 iterator.remove();
             }

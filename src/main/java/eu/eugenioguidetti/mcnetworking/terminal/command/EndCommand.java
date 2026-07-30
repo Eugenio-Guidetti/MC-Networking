@@ -8,6 +8,7 @@ Data: 09/06/2026
 
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -31,6 +32,6 @@ public class EndCommand implements TerminalCommand
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Vai alla modalità di configurazione " + TerminalMode.USER_EXEC;
+        return String.format(Component.translatable("mcnetworking.cli.command.description.end_format").getString(), TerminalMode.USER_EXEC);
     }
 }

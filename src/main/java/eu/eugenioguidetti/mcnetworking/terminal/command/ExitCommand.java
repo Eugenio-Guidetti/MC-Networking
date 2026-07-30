@@ -8,6 +8,7 @@ Data: 09/06/2026
 
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -43,6 +44,6 @@ public class ExitCommand implements TerminalCommand
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Vai alla modalità precedente";
+        return Component.translatable("mcnetworking.cli.command.description.exit").getString();
     }
 }

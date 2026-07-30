@@ -21,10 +21,10 @@ public class RoutingTable
 {
     private final List<Route> table = new ArrayList<>();
 
-    public void addRoute(RouteType type, Ipv4Address destNetwork, Ipv4Address nextHop, int costo, String nicName)
+    public void addRoute(RouteType type, Ipv4Address destNetwork, Ipv4Address nextHop, int cost, String nicName)
     {
         removeRoute(destNetwork, nextHop);
-        table.add(new Route(type, destNetwork, nextHop, costo, nicName));
+        table.add(new Route(type, destNetwork, nextHop, cost, nicName));
     }
 
     public void removeRoute(Ipv4Address destNetwork, Ipv4Address nextHop)

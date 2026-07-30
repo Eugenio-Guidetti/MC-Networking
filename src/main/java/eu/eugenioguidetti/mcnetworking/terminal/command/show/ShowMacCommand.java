@@ -1,9 +1,9 @@
-package eu.eugenioguidetti.mcnetworking.terminal.command.privExec;
+package eu.eugenioguidetti.mcnetworking.terminal.command.show;
 
 /*
 Nome: Eugenio
 Cognome: Guidetti
-Data: 09/06/2026
+Data: 30/07/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
@@ -15,24 +15,25 @@ import net.minecraft.network.chat.Component;
  *
  * @author Eugenio Guidetti
  */
-public class ConfigureTerminalCommand implements TerminalCommand
+public class ShowMacCommand implements TerminalCommand
 {
     @Override
     public void execute(ConsoleSession session, String[] args)
     {
-        session.setCurrentMode(TerminalMode.GLOBAL_CONFIG);
+        session.sendOutput(String.format(Component.translatable("mcnetworking.cli.command.show.mac.output_format").getString(),
+                                         session.getSelectedInterface().getMacAddress().toString()));
     }
 
     @Override
     public boolean canRunCommand(ConsoleSession session)
     {
-        return session.getCurrentMode().equals(TerminalMode.PRIV_EXEC);
+        return session.getCurrentMode().equals(TerminalMode.INTERFACE_CONFIG);
     }
 
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return String.format(Component.translatable("mcnetworking.cli.command.description.configure_format").getString(),
-                             TerminalMode.GLOBAL_CONFIG);
+
+        return Component.translatable("mcnetworking.cli.command.description.show.mac").getString();
     }
 }

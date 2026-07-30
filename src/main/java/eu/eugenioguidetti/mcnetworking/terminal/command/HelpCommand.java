@@ -7,6 +7,7 @@ Data: 09/06/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +48,7 @@ public class HelpCommand implements TerminalCommand
 
         commands.sort(String::compareTo);
 
-        StringBuilder sb = new StringBuilder("Comandi disponibili: ");
+        StringBuilder sb = new StringBuilder(Component.translatable("mcnetworking.cli.command.available_commands").getString());
         sb.append(commands.getFirst());
 
         for (int i = 1; i < commands.size(); i++)
@@ -69,7 +70,7 @@ public class HelpCommand implements TerminalCommand
             }
         }
 
-        return "Comando non trovato: " + commandName;
+        return String.format(Component.translatable("mcnetworking.cli.unknown_command_format").getString(), commandName);
     }
 
     @Override
@@ -81,6 +82,6 @@ public class HelpCommand implements TerminalCommand
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Mostra i comandi disponibili";
+        return Component.translatable("mcnetworking.cli.command.description.help").getString();
     }
 }

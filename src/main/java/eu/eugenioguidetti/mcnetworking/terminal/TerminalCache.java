@@ -9,6 +9,7 @@ Data: 07/06/2026
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -56,8 +57,7 @@ public class TerminalCache
             if ((blockEntity instanceof NetworkingBlockEntity device))
             {
                 List<String> initialHistory = new ArrayList<>();
-                initialHistory.add("Benvenuto nel sistema operativo MCNetworking v1.0");
-                initialHistory.add("Digita \"help\" per info");
+                initialHistory.add(Component.translatable("mcnetworking.cli.welcome_message").getString());
 
                 return new CacheValue(initialHistory, new ConsoleSession(pos, level, device));
             }

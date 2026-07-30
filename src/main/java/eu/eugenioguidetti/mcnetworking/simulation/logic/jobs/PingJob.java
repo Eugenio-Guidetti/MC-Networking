@@ -12,6 +12,7 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ApplicationPayload;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -50,7 +51,9 @@ public class PingJob implements Job
         if (timerTicks <= 0)
         {
             ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-            session.sendOutput("Invio ping, rimanenti: " + remainingResends);
+            session.sendOutput(String.format(Component.translatable("mcnetworking.cli.command.pinging_message_format").getString(),
+                                             destIp,
+                                             remainingResends));
 
             host.triggerSendPacket(destIp, new ApplicationPayload(message));
             remainingResends--;

@@ -9,6 +9,7 @@ Data: 09/06/2026
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -31,6 +32,7 @@ public class EnableCommand implements TerminalCommand
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Vai alla modalità di configurazione " + TerminalMode.PRIV_EXEC;
+        return String.format(Component.translatable("mcnetworking.cli.command.description.enable_format").getString(),
+                             TerminalMode.PRIV_EXEC);
     }
 }

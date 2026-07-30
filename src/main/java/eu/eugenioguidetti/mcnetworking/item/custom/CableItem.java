@@ -49,7 +49,7 @@ public class CableItem extends Item
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext context)
+    public @NonNull InteractionResult useOn(UseOnContext context)
     {
         if (context.getLevel().isClientSide())
         {
@@ -73,7 +73,7 @@ public class CableItem extends Item
         if (player.isCrouching() && pending != null)
         {
             heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
-            player.sendSystemMessage(Component.literal("Collegamento annullato."));
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled"));
             return InteractionResult.SUCCESS;
         }
 
@@ -86,19 +86,19 @@ public class CableItem extends Item
 
         if (clickedNic == null)
         {
-            player.sendSystemMessage(Component.literal("Nessuna interfaccia su questo lato."));
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.no_interfaces_on_this_side"));
             return InteractionResult.FAIL;
         }
 
         if (clickedNic.getConnectorType() != cableType.connectorType())
         {
-            player.sendSystemMessage(Component.literal("Questo cavo non ci entra qui."));
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.wrong_connector"));
             return InteractionResult.FAIL;
         }
 
         if (clickedNic.isConnected())
         {
-            player.sendSystemMessage(Component.literal("Questa interfaccia è già collegata."));
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.interface_already_connected"));
             return InteractionResult.FAIL;
         }
 
@@ -109,7 +109,9 @@ public class CableItem extends Item
             // Salviamo le coordinate dentro l'oggetto (ItemStack)
             heldItem.set(ModDataComponentTypes.PENDING_CONNECTION, new PendingConnection(clickedPos, clickedFace));
 
-            player.sendSystemMessage(Component.literal("Collegamento " + cableType.name() + " iniziato in " + clickedPos.toShortString()));
+            player.sendSystemMessage(Component.literal(String.format(Component
+                                                                             .translatable("mcnetworking.cable.link_started_format")
+                                                                             .getString(), cableType.name(), clickedPos.toShortString())));
             return InteractionResult.SUCCESS;
         }
 
@@ -123,7 +125,7 @@ public class CableItem extends Item
         {
             heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
 
-            player.sendSystemMessage(Component.literal("Collegamento annullato."));
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled"));
 
             return InteractionResult.SUCCESS;
         }
@@ -144,7 +146,7 @@ public class CableItem extends Item
         {
             heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
 
-            player.sendSystemMessage(Component.literal("Collegamento annullato: una delle due interfacce è già stata collegata"));
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled_already_connected"));
 
             return InteractionResult.FAIL;
         }
@@ -163,12 +165,14 @@ public class CableItem extends Item
             heldItem.shrink(1);
         }
 
-        player.sendSystemMessage(Component.literal("Dispositivi collegati con " + cableType.name() + "!"));
+
+        player.sendSystemMessage(Component.literal(String.format(Component.translatable("mcnetworking.cable.link_ended_format").getString(),
+                                                                 cableType.name())));
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public InteractionResult use(@NonNull Level level, Player player, InteractionHand hand)
+    public @NonNull InteractionResult use(@NonNull Level level, @NonNull Player player, @NonNull InteractionHand hand)
     {
         if (level.isClientSide())
         {
@@ -186,17 +190,17 @@ public class CableItem extends Item
 
         heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
 
-        player.sendSystemMessage(Component.literal("Collegamento annullato."));
+        player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled"));
 
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public void appendHoverText(ItemStack itemStack,
-                                TooltipContext context,
-                                TooltipDisplay display,
-                                Consumer<Component> builder,
-                                TooltipFlag tooltipFlag)
+    public void appendHoverText(@NonNull ItemStack itemStack,
+                                @NonNull TooltipContext context,
+                                @NonNull TooltipDisplay display,
+                                @NonNull Consumer<Component> builder,
+                                @NonNull TooltipFlag tooltipFlag)
     {
         PendingConnection pendingConnection = itemStack.get(ModDataComponentTypes.PENDING_CONNECTION);
 

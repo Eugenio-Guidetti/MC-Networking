@@ -11,6 +11,7 @@ import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.PingJob;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -18,8 +19,6 @@ import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
  */
 public class PingCommand implements TerminalCommand
 {
-    //ping [dest_ip] [message] [<resends>]
-
     @Override
     public void execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
     {
@@ -34,7 +33,10 @@ public class PingCommand implements TerminalCommand
 
             if (resends <= 0 && resends != -1)
             {
-                throw new IllegalArgumentException("Numero di resend non valido: " + resends);
+                throw new IllegalArgumentException(String.format(Component
+                                                                         .translatable(
+                                                                                 "mcnetworking.cli.command.invalid_resends_number_format")
+                                                                         .getString(), resends));
             }
         }
         else
@@ -59,6 +61,6 @@ public class PingCommand implements TerminalCommand
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Invia messaggi di ping (non ancora pacchetti ICMP) ad un altro host.\nUso: ping [dest_ip] [message] [<resends>]";
+        return Component.translatable("mcnetworking.cli.command.description.ping").getString();
     }
 }

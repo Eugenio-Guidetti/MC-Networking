@@ -8,8 +8,9 @@ Data: 07/06/2026
 
 import eu.eugenioguidetti.mcnetworking.terminal.command.globalConfig.HostnameCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.interfaceConfig.InterfaceCommand;
-import eu.eugenioguidetti.mcnetworking.terminal.command.interfaceConfig.IpCommand;
+import eu.eugenioguidetti.mcnetworking.terminal.command.ip.IpCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.privExec.ConfigureTerminalCommand;
+import eu.eugenioguidetti.mcnetworking.terminal.command.show.ShowCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.userExec.EnableCommand;
 
 /**

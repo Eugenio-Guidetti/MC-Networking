@@ -8,6 +8,7 @@ Data: 10/06/2026
 
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
+import net.minecraft.network.chat.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +35,6 @@ public abstract class CommandRegistrar
             return;
         }
 
-        // Spezza l'input: "ip address 192.168.1.1" -> ["ip", "address", "192.168.1.1"]
         processInput(session, input.trim().split("\\s+"));
     }
 
@@ -46,7 +46,7 @@ public abstract class CommandRegistrar
 
         if (command == null || !command.canRunCommand(session))
         {
-            session.sendOutput("% Comando sconosciuto: " + commandName);
+            session.sendOutput(String.format(Component.translatable("mcnetworking.cli.unknown_command_format").getString(), commandName));
             return;
         }
 
@@ -56,19 +56,22 @@ public abstract class CommandRegistrar
         }
         catch (ArrayIndexOutOfBoundsException e)
         {
-            session.sendError("Argomento mancante: " + e.getMessage(), e);
+            session.sendError(String.format(Component.translatable("mcnetworking.cli.missing_argument_error_format").getString(),
+                                            commandName), e);
         }
         catch (IllegalArgumentException e)
         {
-            session.sendError("Argomento invalido: " + e.getMessage(), e);
+            session.sendError(String.format(Component.translatable("mcnetworking.cli.invalid_argument_error_format").getString(),
+                                            commandName), e);
         }
         catch (IllegalStateException e)
         {
-            session.sendError("Stato invalido: " + e.getMessage(), e);
+            session.sendError(String.format(Component.translatable("mcnetworking.cli.invalid_state_error_format").getString(), commandName),
+                              e);
         }
         catch (Exception e)
         {
-            session.sendError("Errore generico: " + e.getMessage(), e);
+            session.sendError(String.format(Component.translatable("mcnetworking.cli.generic_error_format").getString(), commandName), e);
 
             MCNetworking.LOGGER.error("Errore generico: ", e);
         }

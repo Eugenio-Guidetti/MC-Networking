@@ -16,6 +16,7 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -88,7 +89,8 @@ public class RoutingL3Engine extends AbstractL3Engine
         if (route == null)
         {
             ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-            session.sendError("Nessuna rotta trovata per: " + packet.destIp());
+            session.sendError(String.format(Component.translatable("mcnetworking.cli.no_route_found_format").getString(),
+                                            packet.destIp().toString()));
 
             return;
         }
@@ -153,7 +155,7 @@ public class RoutingL3Engine extends AbstractL3Engine
                 if (route == null)
                 {
                     ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-                    session.sendError("Nessuna rotta trovata per: " + destIp);
+                    session.sendError(String.format(Component.translatable("mcnetworking.cli.no_route_found_format").getString(), destIp));
 
                     return;
                 }

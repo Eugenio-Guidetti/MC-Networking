@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -56,12 +57,12 @@ public class ConsoleSession
 
     public void sendError(String error)
     {
-        this.sendOutput("§4Errore: " + error);
+        sendOutput(String.format(Component.translatable("mcnetworking.cli.error_format").getString(), error));
     }
 
     public void sendError(String error, Exception e)
     {
-        this.sendOutput("§4Errore: " + error);
+        sendError(error + ": " + e.getMessage());
     }
 
     public BlockPos getPos()

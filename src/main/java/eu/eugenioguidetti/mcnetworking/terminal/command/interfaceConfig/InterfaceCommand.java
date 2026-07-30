@@ -11,6 +11,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -41,7 +42,9 @@ public class InterfaceCommand implements TerminalCommand
 
         if (nic == null)
         {
-            throw new IllegalArgumentException("Interfaccia: " + args[1].toLowerCase() + " non trovata");
+            throw new IllegalArgumentException(String.format(Component
+                                                                     .translatable("mcnetworking.cli.command.interface_not_found_format")
+                                                                     .getString(), args[1].toLowerCase()));
         }
 
         session.selectInterface(nic.getName());
@@ -59,6 +62,7 @@ public class InterfaceCommand implements TerminalCommand
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Vai alla modalità di configurazione " + TerminalMode.INTERFACE_CONFIG;
+        return String.format(Component.translatable("mcnetworking.cli.command.description.interface_format").getString(),
+                             TerminalMode.INTERFACE_CONFIG);
     }
 }

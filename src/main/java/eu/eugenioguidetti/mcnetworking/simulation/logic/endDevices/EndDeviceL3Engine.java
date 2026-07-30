@@ -16,6 +16,7 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -98,7 +99,7 @@ public class EndDeviceL3Engine extends AbstractL3Engine
                     // Nessun gateway configurato
 
                     ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-                    session.sendError("Destination Host Unreachable");
+                    session.sendError(Component.translatable("mcnetworking.cli.destination_host_unreachable").getString());
                     return;
                 }
 
@@ -109,7 +110,7 @@ public class EndDeviceL3Engine extends AbstractL3Engine
                     // La rete del default gateway non è direttamente collegata a me
 
                     ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-                    session.sendError("Default gateway non raggiungibile");
+                    session.sendError(Component.translatable("mcnetworking.cli.destination_host_unreachable").getString());
                     return;
                 }
 

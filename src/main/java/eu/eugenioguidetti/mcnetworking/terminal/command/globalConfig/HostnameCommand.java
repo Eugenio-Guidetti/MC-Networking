@@ -9,6 +9,7 @@ Data: 09/06/2026
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -32,6 +33,6 @@ public class HostnameCommand implements TerminalCommand
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Imposta l'hostname del dispositivo";
+        return Component.translatable("mcnetworking.cli.command.description.hostname").getString();
     }
 }

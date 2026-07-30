@@ -8,6 +8,7 @@ Data: 18/07/2026
 
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
+import net.minecraft.network.chat.Component;
 
 /**
  *
@@ -30,6 +31,6 @@ public class ClearCommand implements TerminalCommand
     @Override
     public String getDescription(ConsoleSession session)
     {
-        return "Pulisce il terminale";
+        return Component.translatable("mcnetworking.cli.command.description.clear").getString();
     }
 }
