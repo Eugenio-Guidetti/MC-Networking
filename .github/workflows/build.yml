@@ -42,9 +42,24 @@ jobs:
           path: build/libs/
 
       - name: Create GitHub Release
-        # Questo step viene eseguito SOLO se l'evento che ha scatenato la action è un Tag
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: build/libs/*.jar
-          generate_release_notes: true
+
+      - name: Publish to Modrinth
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: Kira-NT/mc-publish@v3
+        with:
+          modrinth-id: 'PsNb5dTq'
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          # Specifica il jar da caricare (attenzione a non includere i -dev.jar o -sources.jar se non li vuoi su Modrinth)
+          files: build/libs/!(*-dev|-sources).jar
+          name: ${{ github.ref_name }}-26.2 - MC-Networking
+          version: ${{ github.ref_name }}-26.2
+          version-type: release
+          changelog-file: CHANGELOG.md
+          loaders: fabric
+          game-versions: 26.2
+          dependencies: |
+            fabric-api@required
