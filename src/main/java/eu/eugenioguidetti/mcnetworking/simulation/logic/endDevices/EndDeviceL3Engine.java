@@ -6,17 +6,16 @@ Cognome: Guidetti
 Data: 12/06/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
-import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
+import eu.eugenioguidetti.mcnetworking.Utils;
+import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.AbstractL3Engine;
-import eu.eugenioguidetti.mcnetworking.simulation.logic.NetworkStack;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ArpPayload;
+import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4CidrAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
-import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
-import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
-import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.LOOPBACK_NAME;
 
 /**
  *
@@ -26,100 +25,79 @@ public class EndDeviceL3Engine extends AbstractL3Engine
 {
     private Ipv4Address defaultGateway = null;
 
-    public EndDeviceL3Engine(NetworkingBlockEntity netEntity)
+    public EndDeviceL3Engine(AbstractL3NetworkingBlockEntity netEntity)
     {
         super(netEntity);
     }
 
+
     @Override
-    public void processPacket(Ipv4Packet packet, String from, NetworkStack stack)
+    public void processPacket(@NonNull Ipv4Packet packet, @NonNull String from)
     {
-        Ipv4Address sourceIp = packet.sourceIp();
+        if (!shouldProcessPacket(packet, from))
+        {
+            return;
+        }
+
         Ipv4Address destIp = packet.destIp();
-        Ipv4Address interfaceIp = stack.getNetworkReceiver().getInterface(from).getIpAddress();
+        Ipv4CidrAddress nicIp = l3netEntity.getInterface(from).getIpAddress();
 
-        boolean broadcast = destIp.equals(Ipv4Address.BROADCAST) || destIp.equals(interfaceIp.getIndirizzoDiBroadcast());
-        boolean perMe = destIp.equals(interfaceIp) || (from.equals(NetworkInterface.LOOPBACK_NAME) && destIp.isIndirizzoDiLoopback());
-
-        // Il pacchetto non è destinato a me
-        if (!perMe && !broadcast)
+        // Controlla se destinato all'end device
+        if (destIp.equals(Ipv4Address.BROADCAST) || destIp.equals(nicIp.address()) || destIp.equals(nicIp
+                                                                                                            .getIndirizzoDiBroadcast()
+                                                                                                            .address()) || (destIp.isLoopback() && from.equals(
+                LOOPBACK_NAME)))
         {
-            return;
+            handleLocalPayload(packet, from);
         }
-
-        if (broadcast && isInvalidBroadcast(packet, interfaceIp))
-        {
-            return;
-        }
-
-        NetworkPayload payload = packet.payload();
-
-        if (payload instanceof ArpPayload arp)
-        {
-            arpManager.handleArp(arp, from, stack);
-            return;
-        }
-
-        processChatMessage(packet, from, stack);
-
-        // ... logica per ICMP, TCP, UDP, ecc.
-
     }
 
     @Override
-    public void sendPacket(Ipv4Address destIp, NetworkPayload payload, NetworkStack stack)
+    protected void handleHigherLayerPayload(Ipv4Packet packet, String from)
     {
-        // Determino interfaccia di uscita e nextHop del pacchetto
+        processChatMessage(packet, from);
 
-        String outName = null;
-        Ipv4Address nextHop = null;
-
-        if (destIp.isIndirizzoDiLoopback())
-        {
-            outName = NetworkInterface.LOOPBACK_NAME;
-            nextHop = Ipv4Address.LOOPBACK;
-        }
-        else
-        {
-            // Controllo se il destinatario è in una rete direttamente connessa a me
-            outName = getOutName(destIp, stack);
-
-            if (outName != null)
-            {
-                // Rete di destinazione direttamente connessa
-                int lunghezzaPrefisso = stack.getNetworkReceiver().getInterface(outName).getIpAddress().getLunghezzaPrefisso();
-                nextHop = new Ipv4Address(destIp.getIp(), lunghezzaPrefisso);
-            }
-            else
-            {
-                // Inoltro al default gateway
-
-                if (defaultGateway == null)
-                {
-                    // Nessun gateway configurato
-
-                    ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-                    session.sendError(Component.translatable("mcnetworking.cli.destination_host_unreachable").getString());
-                    return;
-                }
-
-                outName = getOutName(defaultGateway, stack);
-
-                if (outName == null)
-                {
-                    // La rete del default gateway non è direttamente collegata a me
-
-                    ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-                    session.sendError(Component.translatable("mcnetworking.cli.destination_host_unreachable").getString());
-                    return;
-                }
-
-                nextHop = defaultGateway;
-            }
-        }
-
-        sendPacketOut(destIp, payload, nextHop, outName, stack);
+        // TODO: passare il payload ai livelli superiori
     }
+
+    /**
+     *
+     * @return null se non è possibile determinare/raggiungere il next hop
+     */
+    @Override
+    protected @Nullable OutPacketData findOutPacketData(@NonNull Ipv4Address destIp) throws IllegalArgumentException
+    {
+        if (destIp.isAllZeros() || destIp.isBroadcast())
+        {
+            return null;
+        }
+
+        if (destIp.isLoopback())
+        {
+            return new AbstractL3Engine.OutPacketData(Ipv4Address.LOOPBACK, LOOPBACK_NAME);
+        }
+
+        // Controllo se il destinatario è in una rete direttamente connessa a me
+
+        OutPacketData outPacketData = Utils.getOutPacketData(destIp, l3netEntity.getNics().values());
+
+        if (outPacketData != null)
+        {
+            return outPacketData;
+        }
+
+        // Inoltro al default gateway
+
+        if (defaultGateway == null || defaultGateway.isAllZeros())
+        {
+            // default gateway non configurato
+
+            return null;
+        }
+
+        return Utils.getOutPacketData(defaultGateway, l3netEntity.getNics().values());
+    }
+
 
     public Ipv4Address getDefaultGateway()
     {

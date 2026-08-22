@@ -6,7 +6,10 @@ Cognome: Guidetti
 Data: 12/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -14,5 +17,9 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
  */
 public interface L2Engine
 {
-    void processFrame(EthernetFrame frame, String from, NetworkStack stack);
+    void processFrame(@NonNull EthernetFrame frame, @NonNull String from);
+
+    void sendPayload(NetworkPayload payload, MacAddress destMac, String outName);
+
+    void sendFrame(@NonNull EthernetFrame frame, String outName);
 }

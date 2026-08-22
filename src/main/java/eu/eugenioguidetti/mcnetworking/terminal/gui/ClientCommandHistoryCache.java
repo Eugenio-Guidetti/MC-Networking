@@ -6,7 +6,7 @@ Cognome: Guidetti
 Data: 16/06/2026
  */
 
-import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -18,11 +18,11 @@ import java.util.Map;
  *
  * @author Eugenio Guidetti
  */
-public class CommandHistoryCache
+public class ClientCommandHistoryCache
 {
-    private static final Map<BlockPos, List<String>> commandHistory = new HashMap<>();
+    private static final Map<GlobalPos, List<String>> commandHistory = new HashMap<>();
 
-    public static void addCommand(BlockPos pos, String command)
+    public static void addCommand(GlobalPos pos, String command)
     {
         if (command == null || command.isEmpty())
         {
@@ -42,7 +42,7 @@ public class CommandHistoryCache
         commandHistory.get(pos).add(command);
     }
 
-    public static @NotNull String getCommand(BlockPos pos, int index)
+    public static @NotNull String getCommand(GlobalPos pos, int index)
     {
         if (!commandHistory.containsKey(pos))
         {
@@ -57,7 +57,7 @@ public class CommandHistoryCache
         return commandHistory.get(pos).get(index);
     }
 
-    public static int getHistorySize(BlockPos pos)
+    public static int getHistorySize(GlobalPos pos)
     {
         if (!commandHistory.containsKey(pos))
         {
@@ -67,7 +67,7 @@ public class CommandHistoryCache
         return commandHistory.get(pos).size();
     }
 
-    public static void clearCache(BlockPos pos)
+    public static void clearCache(GlobalPos pos)
     {
         commandHistory.remove(pos);
     }

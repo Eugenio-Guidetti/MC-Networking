@@ -11,6 +11,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.CommandRegistrar;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Arrays;
 
@@ -35,7 +36,7 @@ public class ShowCommand extends CommandRegistrar implements TerminalCommand
     }
 
     @Override
-    public void execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException
+    public void execute(@NonNull ConsoleSession session, String @NonNull [] args) throws ArrayIndexOutOfBoundsException
     {
         String[] newArgs = Arrays.copyOfRange(args, 1, args.length);
         processInput(session, newArgs);
@@ -44,13 +45,13 @@ public class ShowCommand extends CommandRegistrar implements TerminalCommand
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
         return session.getCurrentMode().equals(TerminalMode.INTERFACE_CONFIG) || session.getCurrentMode().equals(TerminalMode.PRIV_EXEC);
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.show").getString();
     }

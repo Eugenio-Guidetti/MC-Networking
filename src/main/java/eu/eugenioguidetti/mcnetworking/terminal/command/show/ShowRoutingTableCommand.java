@@ -12,6 +12,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ import java.util.List;
 public class ShowRoutingTableCommand implements TerminalCommand
 {
     @Override
-    public void execute(ConsoleSession session, String[] args)
+    public void execute(@NonNull ConsoleSession session, String @NonNull [] args)
     {
         RoutingTable routingTable = null;
 
@@ -36,7 +37,7 @@ public class ShowRoutingTableCommand implements TerminalCommand
             throw new IllegalStateException(Component.translatable("mcnetworking.cli.command.show.routing_table.missing").getString());
         }
 
-        List<RoutingTable.Route> routes = routingTable.getRoutes(session.getDevice().getNics());
+        List<RoutingTable.Route> routes = routingTable.getRoutes();
 
         if (routes == null || routes.isEmpty())
         {
@@ -56,7 +57,7 @@ public class ShowRoutingTableCommand implements TerminalCommand
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
         return session
                 .getCurrentMode()
@@ -64,7 +65,7 @@ public class ShowRoutingTableCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.show.routing_table").getString();
     }

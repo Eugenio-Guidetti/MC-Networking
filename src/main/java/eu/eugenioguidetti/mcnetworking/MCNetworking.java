@@ -5,6 +5,7 @@ import eu.eugenioguidetti.mcnetworking.block.registry.ModBlocks;
 import eu.eugenioguidetti.mcnetworking.component.ModDataComponentTypes;
 import eu.eugenioguidetti.mcnetworking.creativemodetab.ModCreativeModeTabs;
 import eu.eugenioguidetti.mcnetworking.item.ModItems;
+import eu.eugenioguidetti.mcnetworking.networking.ModPackets;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,5 +26,7 @@ public class MCNetworking implements ModInitializer
         ModItems.registerModItems();
         ModBlocks.registerModBlocks();
         ModBlockEntities.registerModBlocksEntities();
+
+        ModPackets.registerPackets();
     }
 }

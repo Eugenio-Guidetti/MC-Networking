@@ -42,3 +42,4 @@ replay_*.log
 # assets
 *.paint
 iron_block.png
+/src/main/resources/UML/

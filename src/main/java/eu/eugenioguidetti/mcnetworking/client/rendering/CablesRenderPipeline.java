@@ -18,7 +18,9 @@ import com.mojang.blaze3d.vertex.*;
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.Utils;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
-import net.fabricmc.api.ClientModInitializer;
+import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
+import eu.eugenioguidetti.mcnetworking.terminal.gui.ClientCommandHistoryCache;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
@@ -31,10 +33,13 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import org.joml.*;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.jspecify.annotations.NonNull;
 import org.lwjgl.system.MemoryUtil;
 
-import java.lang.Math;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Eugenio Guidetti
  */
-public class CablesRenderPipeline implements ClientModInitializer
+public class CablesRenderPipeline
 {
     private static final RenderPipeline CABLES_PIPELINE = RenderPipelines.register(RenderPipeline
                                                                                            .builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
@@ -65,11 +70,31 @@ public class CablesRenderPipeline implements ClientModInitializer
     // meccanismo di ring buffer già usato per i vertici.
     private MappableRingBuffer indexBuffer;
 
+
+    public CablesRenderPipeline()
+    {
+        instance = this;
+
+        clearCables();
+
+        LevelRenderEvents.END_EXTRACTION.register(this::extractCables);
+        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(this::renderAndDrawCables);
+
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
+                                                       {
+                                                           CablesRenderPipeline.clearCables();
+                                                           TerminalCache.clearAll();
+                                                           ClientCommandHistoryCache.clearAll();
+                                                       });
+    }
+
+
     // :::custom-pipelines:drawing-phase
     public static CablesRenderPipeline getInstance()
     {
         return instance;
     }
+
 
     public static void addCable(@NotNull GlobalPos startPos,
                                 @NotNull Direction startFace,
@@ -130,8 +155,7 @@ public class CablesRenderPipeline implements ClientModInitializer
         activeCables.clear();
     }
 
-    private void draw(Minecraft client,
-                      RenderPipeline pipeline,
+    private void draw(Minecraft client, @NonNull RenderPipeline pipeline,
                       MeshData builtBuffer,
                       MeshData.DrawState drawParameters,
                       GpuBuffer vertices,
@@ -167,8 +191,7 @@ public class CablesRenderPipeline implements ClientModInitializer
                 .getDevice()
                 .createCommandEncoder()
                 .createRenderPass(() -> MCNetworking.MOD_ID + " cables render pipeline rendering",
-                                  client.gameRenderer.mainRenderTarget().getColorTextureView(),
-                                  Optional.<Vector4fc>empty(),
+                                  client.gameRenderer.mainRenderTarget().getColorTextureView(), Optional.empty(),
                                   client.gameRenderer.mainRenderTarget().getDepthTextureView(),
                                   OptionalDouble.empty()))
         {
@@ -192,17 +215,6 @@ public class CablesRenderPipeline implements ClientModInitializer
         }
 
         builtBuffer.close();
-    }
-
-    @Override
-    public void onInitializeClient()
-    {
-        instance = this;
-
-        clearCables();
-
-        LevelRenderEvents.END_EXTRACTION.register(this::extractCables);
-        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(this::renderAndDrawCables);
     }
 
     private void extractCables(LevelExtractionContext context)
@@ -383,7 +395,7 @@ public class CablesRenderPipeline implements ClientModInitializer
         this.buffer = null;
     }
 
-    private GpuBuffer upload(MeshData.DrawState drawParameters, VertexFormat format, MeshData builtBuffer)
+    private @NonNull GpuBuffer upload(MeshData.@NonNull DrawState drawParameters, @NonNull VertexFormat format, MeshData builtBuffer)
     {
         // Calculate the size needed for the vertex buffer
         int vertexBufferSize = drawParameters.vertexCount() * format.getVertexSize();
@@ -420,7 +432,7 @@ public class CablesRenderPipeline implements ClientModInitializer
     // pipeline.getVertexFormat().uploadImmediateIndexBuffer(...), rimosso in questa versione.
     // Carichiamo quindi a mano l'indice (già ordinato per la trasparenza da sortQuads) in un
     // ring buffer dedicato, con lo stesso identico procedimento usato sopra per i vertici.
-    private GpuBuffer uploadIndices(ByteBuffer indexData)
+    private @NonNull GpuBuffer uploadIndices(@NonNull ByteBuffer indexData)
     {
         int indexBufferSize = indexData.remaining();
 

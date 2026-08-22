@@ -9,6 +9,7 @@ Data: 10/06/2026
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,13 +33,14 @@ public abstract class CommandRegistrar
     {
         if (input == null || input.trim().isEmpty())
         {
+            session.updateOutput();
             return;
         }
 
         processInput(session, input.trim().split("\\s+"));
     }
 
-    public void processInput(ConsoleSession session, String[] args)
+    public void processInput(ConsoleSession session, String @NonNull [] args)
     {
         String commandName = args[0].toLowerCase();
 
@@ -57,7 +59,7 @@ public abstract class CommandRegistrar
         catch (ArrayIndexOutOfBoundsException e)
         {
             session.sendError(String.format(Component.translatable("mcnetworking.cli.missing_argument_error_format").getString(),
-                                            commandName), e);
+                                            commandName));
         }
         catch (IllegalArgumentException e)
         {

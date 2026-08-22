@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,9 +30,11 @@ public class TerminalCache
     // Cache server-side
 
     private static final int MAX_LINES = 150;
-    private static final Map<GlobalPos, CacheValue> cache = new HashMap<>();
 
-    public static CacheValue getOrCreateSession(NetworkingBlockEntity entity)
+    // Ogni device ha una propria cache contenente: le ultime 150 righe di output, ConsoleSession con: pos, prompt attuale, eventuale interfaccia selezionata
+    private static final Map<GlobalPos, CacheValue> CACHES = new HashMap<>();
+
+    public static CacheValue getOrCreateSession(@NotNull NetworkingBlockEntity entity)
     {
         ServerLevel level = (ServerLevel) entity.getLevel();
         BlockPos pos = entity.getBlockPos();
@@ -39,7 +42,7 @@ public class TerminalCache
         return getOrCreateSession(level, pos);
     }
 
-    public static CacheValue getOrCreateSession(ServerLevel level, BlockPos pos)
+    public static CacheValue getOrCreateSession(@NotNull ServerLevel level, BlockPos pos)
     {
         if (level.isClientSide())
         {
@@ -49,7 +52,7 @@ public class TerminalCache
         // Creiamo la chiave univoca unendo la dimensione attuale e le coordinate
         GlobalPos key = GlobalPos.of(level.dimension(), pos);
 
-        return cache.computeIfAbsent(key, k ->
+        return CACHES.computeIfAbsent(key, k ->
         {
             BlockEntity blockEntity = level.getBlockEntity(pos);
 
@@ -57,7 +60,28 @@ public class TerminalCache
             if ((blockEntity instanceof NetworkingBlockEntity device))
             {
                 List<String> initialHistory = new ArrayList<>();
-                initialHistory.add(Component.translatable("mcnetworking.cli.welcome_message").getString());
+                initialHistory.add("");
+
+                String welcomeMsg = Component.translatable("mcnetworking.cli.welcome_message").getString();
+
+                for (int i = 0; i < welcomeMsg.length(); i++)
+                {
+                    char c = welcomeMsg.charAt(i);
+
+                    if (c == '\n')
+                    {
+                        initialHistory.add("");
+                    }
+                    else if (c == '\r')
+                    {
+                        initialHistory.set(initialHistory.size() - 1, "");
+                    }
+                    else
+                    {
+                        String currentLine = initialHistory.getLast();
+                        initialHistory.set(initialHistory.size() - 1, currentLine + c);
+                    }
+                }
 
                 return new CacheValue(initialHistory, new ConsoleSession(pos, level, device));
             }
@@ -68,38 +92,66 @@ public class TerminalCache
         });
     }
 
-    public static void addLine(ServerLevel level, BlockPos pos, String line)
+    public static void renderOutput(ServerLevel level, BlockPos pos, String text)
     {
-        if (line == null || line.isEmpty())
+        if (text == null || text.isEmpty())
         {
             return;
         }
 
-        List<String> history = getOrCreateSession(level, pos).history;
-        history.add(line);
+        List<String> history = getOrCreateSession(level, pos).history();
+
+        if (history.isEmpty())
+        {
+            history.add("");
+        }
+
+        for (int i = 0; i < text.length(); i++)
+        {
+            char c = text.charAt(i);
+
+            if (c == '\n')
+            {
+                history.add("");
+            }
+            else if (c == '\t')
+            {
+                String currentLine = history.getLast();
+                currentLine += " ".repeat(4 - (currentLine.length() % 4));
+                history.set(history.size() - 1, currentLine);
+            }
+            else if (c == '\r')
+            {
+                history.set(history.size() - 1, "");
+            }
+            else
+            {
+                String currentLine = history.getLast();
+                history.set(history.size() - 1, currentLine + c);
+            }
+        }
 
         while (history.size() > MAX_LINES)
         {
-            history.removeFirst(); // Rimuove la riga più vecchia
+            history.removeFirst();
         }
     }
 
-
-    public static void clearBlock(Level level, BlockPos pos)
+    public static void clearBlock(@NotNull Level level, BlockPos pos)
     {
         GlobalPos key = GlobalPos.of(level.dimension(), pos);
-        cache.get(key).history.clear();
+        CACHES.get(key).history.clear();
     }
 
-    public static void removeBlock(Level level, BlockPos pos)
+    public static void removeBlock(@NotNull Level level, BlockPos pos)
     {
         GlobalPos key = GlobalPos.of(level.dimension(), pos);
-        cache.remove(key);
+        CACHES.remove(key);
     }
 
     public static void clearAll()
     {
-        cache.clear();
+        CACHES.clear();
     }
 
     public record CacheValue(List<String> history, ConsoleSession session)

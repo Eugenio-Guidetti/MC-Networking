@@ -120,7 +120,7 @@ public class ModRecipeProvider extends FabricRecipeProvider
 
 
     @Override
-    public String getName()
+    public @NonNull String getName()
     {
         return MCNetworking.MOD_ID + " Recipes";
     }

@@ -8,30 +8,36 @@ Data: 03/06/2026
 
 import eu.eugenioguidetti.mcnetworking.block.registry.ModBlockEntities;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.endDevices.EndDeviceL2Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.networkDevices.RoutingL3Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.networkDevices.RoutingTable;
-import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import org.jspecify.annotations.NonNull;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
  * @author Eugenio Guidetti
  */
-public class RouterBlockEntity extends NetworkingBlockEntity
+public class RouterBlockEntity extends AbstractL3NetworkingBlockEntity
 {
+    // A livello 2 i router si comportano come gli host
+    private final EndDeviceL2Engine l2Engine = new EndDeviceL2Engine(this);
     private final RoutingL3Engine l3Engine = new RoutingL3Engine(this);
 
     public RouterBlockEntity(BlockPos pos, BlockState blockState)
     {
         super(ModBlockEntities.ROUTER_BLOCK_ENTITY, pos, blockState);
 
+        this.stack.setL2Engine(l2Engine);
         this.stack.setL3Engine(l3Engine);
 
         hostname = "Router";
@@ -47,23 +53,66 @@ public class RouterBlockEntity extends NetworkingBlockEntity
         return this.l3Engine.getRoutingTable();
     }
 
-    public Map<Ipv4Address, MacAddress> getArpCache()
-    {
-        return l3Engine.getArpManager().getArpCache();
-    }
 
+    // --- Salvataggio/caricamento rotte statiche in NBT ---
 
     @Override
-    public void tickServer(Level level)
+    protected void saveAdditional(@NonNull ValueOutput output)
     {
-        super.tickServer(level);
+        super.saveAdditional(output);
 
-        l3Engine.getArpManager().tick(this);
+        List<RoutingTable.Route> staticRoutes = l3Engine.getRoutingTable().getStaticRoutes();
+
+        if (staticRoutes.isEmpty())
+        {
+            return;
+        }
+
+        ValueOutput routingTableOutput = output.child("RoutingTable");
+
+        routingTableOutput.putInt("Size", staticRoutes.size());
+
+        for (int i = 0; i < staticRoutes.size(); i++)
+        {
+            RoutingTable.Route route = staticRoutes.get(i);
+            ValueOutput routeOutput = routingTableOutput.child("Route_" + i);
+
+            route.save(routeOutput);
+        }
     }
 
     @Override
-    public int getDeviceLayer()
+    protected void loadAdditional(@NonNull ValueInput input)
     {
-        return 3;
+        super.loadAdditional(input);
+
+        ValueInput routingTableInput = input.child("RoutingTable").orElse(null);
+
+        if (routingTableInput == null)
+        {
+            return;
+        }
+
+        int size = routingTableInput.getInt("Size").orElse(0);
+        List<RoutingTable.Route> staticRoutes = new ArrayList<>(size);
+
+        for (int i = 0; i < size; i++)
+        {
+            ValueInput routeInput = routingTableInput.child("Route_" + i).orElse(null);
+
+            if (routeInput == null)
+            {
+                continue;
+            }
+
+            RoutingTable.Route r = RoutingTable.Route.load(routeInput);
+
+            if (r == null)
+            {
+                continue;
+            }
+
+            l3Engine.getRoutingTable().addRoute(r);
+        }
     }
 }

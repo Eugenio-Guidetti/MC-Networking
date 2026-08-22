@@ -33,5 +33,6 @@ public class Commands extends CommandRegistrar
         commands.put("ip", new IpCommand());
         commands.put("ping", new PingCommand());
         commands.put("show", new ShowCommand());
+        commands.put("traceroute", new TraceRouteCommand());
     }
 }

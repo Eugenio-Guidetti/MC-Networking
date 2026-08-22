@@ -6,6 +6,8 @@ Cognome: Guidetti
 Data: 02/06/2026
  */
 
+import org.jspecify.annotations.NonNull;
+
 /**
  *
  * @author Eugenio Guidetti
@@ -15,7 +17,7 @@ public record TcpSegment(int sourcePort, int destPort, NetworkPayload payload) i
     public static final int TCP_HEADER_LENGTH = 20;
 
     @Override
-    public String getDisplayString()
+    public @NonNull String getDisplayString()
     {
         return String.format("[TCP %d->%d] %s", sourcePort, destPort, payload.getDisplayString());
     }

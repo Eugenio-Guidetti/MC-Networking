@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -26,14 +27,14 @@ public class RouterBlock extends NetworkingBlock
     }
 
     @Override
-    protected MapCodec<? extends BaseEntityBlock> codec()
+    protected @NonNull MapCodec<? extends BaseEntityBlock> codec()
     {
         return simpleCodec(RouterBlock::new);
     }
 
     @Nullable
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state)
+    public BlockEntity newBlockEntity(@NonNull BlockPos pos, @NonNull BlockState state)
     {
         return new RouterBlockEntity(pos, state);
     }

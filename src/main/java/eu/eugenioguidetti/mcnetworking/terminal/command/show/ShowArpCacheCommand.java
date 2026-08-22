@@ -14,6 +14,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
@@ -24,7 +25,7 @@ import java.util.Map;
 public class ShowArpCacheCommand implements TerminalCommand
 {
     @Override
-    public void execute(ConsoleSession session, String[] args)
+    public void execute(@NonNull ConsoleSession session, String @NonNull [] args)
     {
         Map<Ipv4Address, MacAddress> arpCache = null;
 
@@ -56,13 +57,13 @@ public class ShowArpCacheCommand implements TerminalCommand
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
         return session.getCurrentMode().equals(TerminalMode.PRIV_EXEC) && session.getDevice().getDeviceLayer() >= 3;
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.show.arp_cache").getString();
     }

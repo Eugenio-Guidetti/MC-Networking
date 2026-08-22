@@ -6,12 +6,13 @@ Cognome: Guidetti
 Data: 09/06/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
+import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.PingJob;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -20,16 +21,16 @@ import net.minecraft.network.chat.Component;
 public class PingCommand implements TerminalCommand
 {
     @Override
-    public void execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
+    public void execute(@NonNull ConsoleSession session,
+                        String @NonNull [] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
     {
-        HostBlockEntity host = (HostBlockEntity) session.getDevice();
+        AbstractL3NetworkingBlockEntity l3NetEntity = (AbstractL3NetworkingBlockEntity) session.getDevice();
         Ipv4Address destIp = new Ipv4Address(args[1]);
-        String message = args[2];
-        int resends;
 
-        if (args.length == 4)
+        int resends;
+        if (args.length == 3)
         {
-            resends = Integer.parseInt(args[3]);
+            resends = Integer.parseInt(args[2]);
 
             if (resends <= 0 && resends != -1)
             {
@@ -44,13 +45,13 @@ public class PingCommand implements TerminalCommand
             resends = 4;
         }
 
-        host.startJob(new PingJob(destIp, message, resends));
+        l3NetEntity.startJob(new PingJob(destIp, resends, l3NetEntity));
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
-        if (!(session.getDevice() instanceof HostBlockEntity))
+        if (!(session.getDevice() instanceof AbstractL3NetworkingBlockEntity))
         {
             return false;
         }
@@ -59,7 +60,7 @@ public class PingCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.ping").getString();
     }

@@ -8,6 +8,7 @@ Data: 06/06/2026
 
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -20,7 +21,7 @@ public record ArpPayload(MacAddress senderMac, Ipv4Address senderIp, MacAddress 
     public static final int OPERATION_ARP_REPLY = 2;
 
     @Override
-    public String getDisplayString()
+    public @NonNull String getDisplayString()
     {
         String format;
 

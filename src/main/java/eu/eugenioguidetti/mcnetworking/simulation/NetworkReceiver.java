@@ -6,7 +6,8 @@ Cognome: Guidetti
 Data: 25/05/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.NetworkStack;
+import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import net.minecraft.core.Direction;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,17 +19,13 @@ import java.util.Map;
  */
 public interface NetworkReceiver
 {
-    /**
-     * @param frame Il frame in arrivo.
-     * @param from  Il nome dell'interfaccia a cui è stato inviato il frame
-     */
-    void receiveFrame(@NotNull EthernetFrame frame, @NotNull String from);
-
     void putInterface(@NotNull NetworkInterface networkInterface);
 
-    NetworkInterface getInterface(String nicName);
+    NetworkInterface getInterface(@NotNull String nicName);
 
     NetworkInterface getInterface(Direction face);
+
+    NetworkInterface getInterface(MacAddress macAddress);
 
     String getInterfaceName(Direction face);
 
@@ -37,6 +34,8 @@ public interface NetworkReceiver
     void disconnectPhysical(Direction face);
 
     void disconnectAllPhysical();
+
+    NetworkStack getStack();
 
     void sync();
 

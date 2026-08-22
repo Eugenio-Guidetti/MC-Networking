@@ -11,6 +11,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.CommandRegistrar;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Arrays;
 
@@ -26,10 +27,12 @@ public class IpCommand extends CommandRegistrar implements TerminalCommand
 
         commands.put("address", new IpAddressCommand());
         commands.put("default_gateway", new IpDefaultGatewayCommand());
+        commands.put("route", new IpRouteCommand());
     }
 
     @Override
-    public void execute(ConsoleSession session, String[] args) throws IllegalArgumentException, ArrayIndexOutOfBoundsException
+    public void execute(@NonNull ConsoleSession session,
+                        String @NonNull [] args) throws IllegalArgumentException, ArrayIndexOutOfBoundsException
     {
         String[] newArgs = Arrays.copyOfRange(args, 1, args.length);
         processInput(session, newArgs);
@@ -38,7 +41,7 @@ public class IpCommand extends CommandRegistrar implements TerminalCommand
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
         return session.getDevice().getDeviceLayer() >= 3 && (session.getCurrentMode().equals(TerminalMode.GLOBAL_CONFIG) || session
                 .getCurrentMode()
@@ -46,7 +49,7 @@ public class IpCommand extends CommandRegistrar implements TerminalCommand
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.ip").getString();
     }

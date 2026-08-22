@@ -11,6 +11,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -23,7 +24,7 @@ import java.util.List;
 public class ShowInterfacesCommand implements TerminalCommand
 {
     @Override
-    public void execute(ConsoleSession session, String[] args)
+    public void execute(@NonNull ConsoleSession session, String @NonNull [] args)
     {
         StringBuilder sb = new StringBuilder(Component.translatable("mcnetworking.cli.command.show.interfaces.output").getString());
 
@@ -33,7 +34,7 @@ public class ShowInterfacesCommand implements TerminalCommand
 
         for (NetworkInterface nic : nics)
         {
-            sb.append("\n ");
+            sb.append(" ");
 
             sb.append(nic.getName());
 
@@ -63,13 +64,13 @@ public class ShowInterfacesCommand implements TerminalCommand
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
         return session.getCurrentMode().equals(TerminalMode.PRIV_EXEC);
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.show.interfaces").getString();
     }

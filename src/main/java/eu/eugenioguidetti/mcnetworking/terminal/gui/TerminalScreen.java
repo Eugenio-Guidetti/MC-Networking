@@ -6,18 +6,20 @@ Cognome: Guidetti
 Data: 07/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.networking.packet.OpenTerminalS2CPayload;
+import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalCommandC2SPayload;
+import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalOutputS2CPayload;
+import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalSignalC2SPayload;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
-import eu.eugenioguidetti.mcnetworking.terminal.packet.TerminalCommandC2SPacket;
+import eu.eugenioguidetti.mcnetworking.terminal.TerminalSignal;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
@@ -31,29 +33,38 @@ import java.util.List;
  */
 public class TerminalScreen extends Screen
 {
-    private final Level level;
-    private final BlockPos pos;
+    private final GlobalPos pos;
     private final int GREEN = 0xFF00FF00;
     private final int BACKGROUND = 0x88000000;
     private List<String> history = null;
     private List<FormattedCharSequence> visualLines = null;
     private EditBox inputField;
+    private boolean showPrompt;
     private String currentPrompt = null;
 
     private int historyIndex = 0;
     private String draftCommand = "";
     private int scrollOffset = 0;
 
-    public TerminalScreen(Level level, BlockPos pos, List<String> history, String currentPrompt)
+    public TerminalScreen(@NonNull OpenTerminalS2CPayload payload)
     {
         super(Component.literal("Terminal"));
 
-        this.level = level;
-        this.pos = pos;
+        this.pos = payload.pos();
 
-        this.history = history;
-        this.currentPrompt = currentPrompt;
-        this.historyIndex = CommandHistoryCache.getHistorySize(pos);
+        if (payload.history().isEmpty())
+        {
+            this.currentPrompt = payload.currentPrompt();
+        }
+        else
+        {
+            this.currentPrompt = payload.history().getLast() + payload.currentPrompt();
+        }
+
+        this.history = payload.history();
+        this.showPrompt = payload.showPrompt();
+        this.historyIndex = ClientCommandHistoryCache.getHistorySize(pos);
+
     }
 
     @Override
@@ -92,12 +103,12 @@ public class TerminalScreen extends Screen
     {
         super.tick();
 
-        if (this.minecraft == null || this.minecraft.level == null)
+        if (this.minecraft.level == null)
         {
             return;
         }
 
-        BlockEntity blockEntity = this.minecraft.level.getBlockEntity(this.pos);
+        BlockEntity blockEntity = this.minecraft.level.getBlockEntity(this.pos.pos());
 
         if (!(blockEntity instanceof NetworkReceiver))
         {
@@ -108,17 +119,12 @@ public class TerminalScreen extends Screen
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a)
     {
-        if (this.getFocused() == null)
-        {
-            this.setFocused(this.inputField);
-        }
-
-        // 1. Sfondo completamente nero (usiamo graphics al posto del vecchio guiGraphics)
+        // Sfondo
         graphics.fill(0, 0, this.width, this.height, BACKGROUND);
 
-        // 2. Disegniamo lo storico (partendo dal basso verso l'alto, appena sopra l'input)
+        // Storico
         visualLines = getVisualLines();
-        int yOffset = this.height - 35;
+        int yOffset = showPrompt ? this.height - 32 : this.height - 20;
 
         int startIndex = visualLines.size() - 1 - scrollOffset;
 
@@ -132,100 +138,133 @@ public class TerminalScreen extends Screen
             yOffset -= 12; // Spazio tra le righe
         }
 
-        // 3. Disegniamo il PROMPT "finto" esattamente a sinistra della casella di input
-        graphics.text(this.font, currentPrompt, 10, this.height - 20, GREEN, false);
+        // Prompt "finto" esattamente a sinistra della casella di input
+        if (showPrompt)
+        {
+            graphics.text(this.font, currentPrompt, 10, this.height - 20, GREEN, false);
+        }
 
-        // 4. Scroll bar
+        this.inputField.setVisible(showPrompt);
+
+        if (this.inputField.isFocused() != showPrompt)
+        {
+            this.inputField.setFocused(showPrompt);
+        }
+
+        // Scroll bar
         this.renderScrollbar(graphics);
 
-        // 5. Renderizziamo i widget (inclusa la casella di testo) passando i nuovi parametri
         super.extractRenderState(graphics, mouseX, mouseY, a);
     }
 
     @Override
     public boolean keyPressed(@NonNull KeyEvent event)
     {
-        if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER)
+        if (event.hasControlDown())
         {
-            String command = this.inputField.getValue().trim();
-
-            if (!command.isEmpty())
+            if (event.hasShiftDown())
             {
-                this.scrollOffset = 0;
+                int modifiers = event.modifiers();
+                // Tolgo lo shift premuto
+                modifiers &= ~1;
+                KeyEvent event1 = new KeyEvent(event.key(), event.scancode(), modifiers);
+                return super.keyPressed(event1);
             }
 
-            ClientPlayNetworking.send(new TerminalCommandC2SPacket(this.pos, command));
-
-            // Aggiungi il comando digitato allo storico locale per vederlo
-            history.add(currentPrompt + command);
-            visualLines = getVisualLines();
-
-            CommandHistoryCache.addCommand(pos, command);
-
-            if (command.toLowerCase().startsWith("clear"))
+            if (event.key() == GLFW.GLFW_KEY_C)
             {
-                history.clear();
-                visualLines.clear();
+                if (!this.inputField.getValue().isEmpty())
+                {
+                    this.inputField.setValue("");
+                }
+                else
+                {
+                    ClientPlayNetworking.send(new TerminalSignalC2SPayload(TerminalSignal.SIGINT, this.pos));
+                }
             }
 
-            draftCommand = "";
-            historyIndex = CommandHistoryCache.getHistorySize(pos);
-            this.inputField.setValue("");
+            else if (event.key() == GLFW.GLFW_KEY_D)
+            {
+                // "Svuota buffer"
+                if (!this.inputField.getValue().isEmpty())
+                {
+                    inviaComando(this.inputField.getValue().trim(), true);
+                }
+                else
+                {
+                    this.onClose();
+                }
+            }
+
+            else if (event.key() == GLFW.GLFW_KEY_L)
+            {
+                inviaComando("clear", false);
+            }
 
             return true;
         }
 
-        // Scorri indietro
-        if (event.key() == GLFW.GLFW_KEY_UP)
+        if (showPrompt)
         {
-            if (CommandHistoryCache.getCommand(pos, historyIndex - 1).isEmpty())
+            if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER)
             {
+                inviaComando(this.inputField.getValue().trim(), true);
+
                 return true;
             }
 
-            // Se siamo in fondo, salviamo la bozza attuale
-            if (historyIndex == CommandHistoryCache.getHistorySize(pos))
+            // Scorri indietro
+            if (event.key() == GLFW.GLFW_KEY_UP)
             {
-                draftCommand = this.inputField.getValue();
-            }
+                if (ClientCommandHistoryCache.getCommand(pos, historyIndex - 1).isEmpty())
+                {
+                    return true;
+                }
 
-            if (historyIndex > 0)
-            {
-                historyIndex--;
-                this.inputField.setValue(CommandHistoryCache.getCommand(pos, historyIndex));
-                // Sposta il cursore alla fine del testo caricato
-                this.inputField.setCursorPosition(this.inputField.getValue().length());
-            }
-            return true;
-        }
+                // Se siamo in fondo, salviamo la bozza attuale
+                if (historyIndex == ClientCommandHistoryCache.getHistorySize(pos))
+                {
+                    draftCommand = this.inputField.getValue();
+                }
 
-        // Scorri avanti
-        if (event.key() == GLFW.GLFW_KEY_DOWN)
-        {
-            if (CommandHistoryCache.getCommand(pos, historyIndex).isEmpty())
-            {
+                if (historyIndex > 0)
+                {
+                    historyIndex--;
+                    this.inputField.setValue(ClientCommandHistoryCache.getCommand(pos, historyIndex));
+                    // Sposta il cursore alla fine del testo caricato
+                    this.inputField.setCursorPosition(this.inputField.getValue().length());
+                }
                 return true;
             }
 
-            historyIndex++;
-
-            if (historyIndex < CommandHistoryCache.getHistorySize(pos))
+            // Scorri avanti
+            if (event.key() == GLFW.GLFW_KEY_DOWN)
             {
-                this.inputField.setValue(CommandHistoryCache.getCommand(pos, historyIndex));
-                this.inputField.setCursorPosition(this.inputField.getValue().length());
-            }
-            else if (historyIndex == CommandHistoryCache.getHistorySize(pos))
-            {
-                // Siamo tornati in fondo, ripristiniamo la bozza
-                this.inputField.setValue(draftCommand);
-                this.inputField.setCursorPosition(this.inputField.getValue().length());
-            }
-            return true;
-        }
+                if (ClientCommandHistoryCache.getCommand(pos, historyIndex).isEmpty())
+                {
+                    return true;
+                }
 
-        if (event.key() == GLFW.GLFW_KEY_TAB)
-        {
-            return true;
+                historyIndex++;
+
+                if (historyIndex < ClientCommandHistoryCache.getHistorySize(pos))
+                {
+                    this.inputField.setValue(ClientCommandHistoryCache.getCommand(pos, historyIndex));
+                    this.inputField.setCursorPosition(this.inputField.getValue().length());
+                }
+                else if (historyIndex == ClientCommandHistoryCache.getHistorySize(pos))
+                {
+                    // Siamo tornati in fondo, ripristiniamo la bozza
+                    this.inputField.setValue(draftCommand);
+                    this.inputField.setCursorPosition(this.inputField.getValue().length());
+                }
+                return true;
+            }
+
+            if (event.key() == GLFW.GLFW_KEY_TAB)
+            {
+                return true;
+            }
         }
 
         return super.keyPressed(event);
@@ -254,6 +293,42 @@ public class TerminalScreen extends Screen
 
         return true;
     }
+
+    private @NonNull List<FormattedCharSequence> getVisualLines()
+    {
+        List<FormattedCharSequence> visualLines = new ArrayList<>();
+
+        int maxLineWidth = Math.max(10, this.width - 20);
+
+        // L'ultima è quella in cui ci sarà il prossimo prompt
+        for (int i = 0; i < history.size(); i++)
+        {
+            if (showPrompt && i == history.size() - 1)
+            {
+                break;
+            }
+
+            String line = history.get(i);
+
+            if (line.isBlank())
+            {
+                visualLines.add(FormattedCharSequence.EMPTY);
+                continue;
+            }
+
+            // font.split spezza la stringa in base ai pixel e al word-wrap di Minecraft
+            visualLines.addAll(this.font.split(Component.literal(line), maxLineWidth));
+        }
+
+        return visualLines;
+    }
+
+    @Override
+    public boolean isPauseScreen()
+    {
+        return false;
+    }
+
 
     private void renderScrollbar(GuiGraphicsExtractor graphics)
     {
@@ -289,63 +364,49 @@ public class TerminalScreen extends Screen
         graphics.fill(trackX, thumbY, trackX + trackWidth, thumbY + thumbHeight, GREEN);
     }
 
-    @Override
-    public boolean isPauseScreen()
-    {
-        return false;
-    }
 
-    // Metodo chiamato quando ricevo un pacchetto S2C dal server
-    public void addOutput(String output, String newPrompt, @NonNull GlobalPos globalPos)
+    private void inviaComando(@NonNull String comando, boolean addToHistory)
     {
-        GlobalPos terminalPos = GlobalPos.of(this.level.dimension(), this.pos);
-        if (!globalPos.equals(terminalPos))
+        if (!comando.isEmpty())
+        {
+            this.scrollOffset = 0;
+        }
+
+        ClientPlayNetworking.send(new TerminalCommandC2SPayload(comando, pos));
+
+        if (!addToHistory)
         {
             return;
         }
 
-        if (output != null && !output.isEmpty())
+        ClientCommandHistoryCache.addCommand(pos, comando);
+        historyIndex = ClientCommandHistoryCache.getHistorySize(pos);
+
+        draftCommand = "";
+        this.inputField.setValue("");
+    }
+
+    // Metodo chiamato alla ricezione di un pacchetto TerminalOutputS2CPayload
+    public void updateOutput(@NonNull TerminalOutputS2CPayload payload)
+    {
+        if (!this.pos.equals(payload.globalPos()))
         {
-            for (String s : output.split("\n"))
-            {
-                if (s.isEmpty())
-                {
-                    continue;
-                }
-
-                if (s.replaceFirst(newPrompt, "").toLowerCase().startsWith("clear"))
-                {
-                    history.clear();
-                    visualLines.clear();
-
-                    continue;
-                }
-
-                history.add(s);
-                visualLines = getVisualLines();
-            }
+            return;
         }
 
-        if (newPrompt != null && !newPrompt.isEmpty() && !newPrompt.equals(currentPrompt))
+        this.showPrompt = payload.showPrompt();
+        this.history = new ArrayList<>(payload.screenBuffer());
+        this.visualLines = getVisualLines();
+
+        if (payload.screenBuffer().isEmpty())
         {
-            currentPrompt = newPrompt;
+            this.currentPrompt = payload.prompt();
+        }
+        else
+        {
+            this.currentPrompt = payload.screenBuffer().getLast() + payload.prompt();
         }
 
         this.init();
-    }
-
-    private @NonNull List<FormattedCharSequence> getVisualLines()
-    {
-        List<FormattedCharSequence> visualLines = new ArrayList<>();
-        // Calcoliamo la larghezza massima disponibile per il testo (es. larghezza schermo meno 20 pixel di margini)
-        int maxLineWidth = Math.max(10, this.width - 20);
-
-        for (String line : history)
-        {
-            // font.split spezza la stringa in base ai pixel e al word-wrap di Minecraft
-            visualLines.addAll(this.font.split(Component.literal(line), maxLineWidth));
-        }
-
-        return visualLines;
     }
 }

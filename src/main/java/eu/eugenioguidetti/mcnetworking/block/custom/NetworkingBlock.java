@@ -8,12 +8,13 @@ Data: 04/06/2026
 
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.item.ModItems;
+import eu.eugenioguidetti.mcnetworking.networking.packet.OpenTerminalS2CPayload;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
-import eu.eugenioguidetti.mcnetworking.terminal.packet.OpenTerminalS2CPacket;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -28,6 +29,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -41,7 +43,9 @@ public abstract class NetworkingBlock extends BaseEntityBlock
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type)
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NonNull Level level,
+                                                                  @NonNull BlockState state,
+                                                                  @NonNull BlockEntityType<T> type)
     {
         if (level.isClientSide())
         {
@@ -54,19 +58,19 @@ public abstract class NetworkingBlock extends BaseEntityBlock
     }
 
     @Override
-    public RenderShape getRenderShape(BlockState state)
+    public @NonNull RenderShape getRenderShape(@NonNull BlockState state)
     {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected InteractionResult useItemOn(ItemStack itemStack,
-                                          BlockState state,
-                                          Level level,
-                                          BlockPos pos,
-                                          Player player,
-                                          InteractionHand hand,
-                                          BlockHitResult hitResult)
+    protected @NonNull InteractionResult useItemOn(@NonNull ItemStack itemStack,
+                                                   @NonNull BlockState state,
+                                                   @NonNull Level level,
+                                                   @NonNull BlockPos pos,
+                                                   @NonNull Player player,
+                                                   @NonNull InteractionHand hand,
+                                                   @NonNull BlockHitResult hitResult)
     {
         if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer))
         {
@@ -91,7 +95,11 @@ public abstract class NetworkingBlock extends BaseEntityBlock
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult)
+    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state,
+                                                        @NonNull Level level,
+                                                        @NonNull BlockPos pos,
+                                                        @NonNull Player player,
+                                                        @NonNull BlockHitResult hitResult)
     {
         if (!player.getMainHandItem().isEmpty())
         {
@@ -107,7 +115,11 @@ public abstract class NetworkingBlock extends BaseEntityBlock
         TerminalCache.CacheValue cached = TerminalCache.getOrCreateSession((ServerLevel) level, pos);
 
         // Il server dice al client di aprire l'interfaccia terminalScreen
-        ServerPlayNetworking.send(serverPlayer, new OpenTerminalS2CPacket(pos, cached.history(), cached.session().getPrompt()));
+        ServerPlayNetworking.send(serverPlayer,
+                                  new OpenTerminalS2CPayload(cached.history(),
+                                                             cached.session().getDevice().getForegroundJob().isEmpty(),
+                                                             cached.session().getPrompt(),
+                                                             GlobalPos.of(level.dimension(), pos)));
         return InteractionResult.CONSUME;
     }
 }

@@ -8,6 +8,7 @@ Data: 09/06/2026
 
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +29,7 @@ public class HelpCommand implements TerminalCommand
     }
 
     @Override
-    public void execute(ConsoleSession session, String[] args)
+    public void execute(@NonNull ConsoleSession session, String @NonNull [] args)
     {
         if (args.length > 1)
         {
@@ -57,6 +58,8 @@ public class HelpCommand implements TerminalCommand
             sb.append(commands.get(i));
         }
 
+        sb.append("\n");
+
         session.sendOutput(sb.toString());
     }
 
@@ -74,13 +77,13 @@ public class HelpCommand implements TerminalCommand
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
         return true;
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.help").getString();
     }

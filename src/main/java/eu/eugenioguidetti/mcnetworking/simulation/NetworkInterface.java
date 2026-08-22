@@ -7,7 +7,8 @@ Data: 26/05/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.Utils;
-import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
+import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
+import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4CidrAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
@@ -23,20 +24,30 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.LOOPBACK_NAME;
+
 /**
  *
  * @author Eugenio Guidetti
  */
+
 public class NetworkInterface
 {
-    public static final String LOOPBACK_NAME = "lo";
+    /**
+     *
+     * @param connectedTargetName il nome dell'interfaccia connessa (es. 'eth0')
+     */
+    public record PhysicalConnectionData(@NonNull BlockPos connectedTargetPos, @NonNull String connectedTargetName,
+                                         @NonNull Direction connectedTargetFace, @NonNull CableType connectedCableType)
+    {
+    }
+
 
     // Coda di Trasmissione (Buffer)
     private final Queue<EthernetFrame> txQueue = new LinkedList<>();
@@ -44,23 +55,17 @@ public class NetworkInterface
     private final String name;
     private final BlockPos pos;
     private final Direction direction;
+
     private ConnectorType connectorType = ConnectorType.RJ45;
-    private float txSpeed = 0.5f;
+    private final float txSpeed = 2500f; // [Byte / s]
 
     private EthernetFrame currentTxFrame = null;
     private int currentTxTicksRemaining = 0;
 
-    private MacAddress macAddress = MacAddress.ALL_ZEROS;
-    private Ipv4Address ipAddress = Ipv4Address.ALL_ZEROS;
+    private MacAddress macAddress = null;
+    private Ipv4CidrAddress ipAddress = null;
 
-    @Nullable
-    private BlockPos connectedTargetPos = null;
-    @Nullable
-    private String connectedTargetName = null;
-    @Nullable
-    private Direction connectedTargetFace = null;
-    @Nullable
-    private CableType connectedCableType = null;
+    private PhysicalConnectionData physicalConnectionData = null;
 
     /**
      * Crea un'interfaccia con un indirizzo MAC casuale (Locally Administered, Unicast)
@@ -74,7 +79,7 @@ public class NetworkInterface
         this.direction = direction;
         this.connectorType = connectorType;
 
-        this.ipAddress = Ipv4Address.ALL_ZEROS;
+        this.ipAddress = Ipv4CidrAddress.ALL_ZEROS;
     }
 
     public NetworkInterface(MacAddress macAddress,
@@ -93,17 +98,17 @@ public class NetworkInterface
         }
 
         this.name = name.toLowerCase();
-        this.pos = pos.immutable(); // ! IMPORTANTE ! usare .immutable() senno si sminchia tutto
+        this.pos = pos.immutable(); // ! IMPORTANTE ! Usare .immutable() senno si sminchia tutto
         this.direction = direction;
         this.connectorType = connectorType;
 
-        this.ipAddress = Ipv4Address.ALL_ZEROS;
+        this.ipAddress = Ipv4CidrAddress.ALL_ZEROS;
     }
 
     /**
      * Chiamato dall'Host/Router quando vuole inviare un pacchetto.
      */
-    public void sendFrame(EthernetFrame frame)
+    public void sendFrame(@NotNull EthernetFrame frame)
     {
         if (!isConnected())
         {
@@ -126,7 +131,7 @@ public class NetworkInterface
             currentTxFrame = txQueue.poll();
 
             // Calcolo ritardo
-            currentTxTicksRemaining = connectedCableType.ticksDelay() + (int) (currentTxFrame.getSizeInBytes() * this.txSpeed);
+            currentTxTicksRemaining = physicalConnectionData.connectedCableType.ticksDelay() + (int) (currentTxFrame.getSizeInBytes() * 20 / this.txSpeed);
         }
 
         // Eseguo ritardo
@@ -143,19 +148,17 @@ public class NetworkInterface
         }
 
         // Ritardo esaurito
-        BlockEntity target = level.getBlockEntity(this.connectedTargetPos);
-        if (target instanceof NetworkReceiver receiver)
+        BlockEntity target = level.getBlockEntity(this.physicalConnectionData.connectedTargetPos);
+        if (target instanceof NetworkingBlockEntity netEntity)
         {
-
-
             // Il pacchetto entra nel blocco alle coordinate dell'interfaccia di destinazione, specifico da quale faccia arriva
-            receiver.receiveFrame(currentTxFrame, this.connectedTargetName);
+            netEntity.getStack().receiveFrame(currentTxFrame, this.physicalConnectionData.connectedTargetName);
         }
 
         currentTxFrame = null;
     }
 
-    private void showParticles(ServerLevel serverLevel)
+    private void showParticles(@NonNull ServerLevel serverLevel)
     {
         int color = ARGB.color(255, 255, 0); // Giallo
         Vec3 pos = Utils.getInterfaceCenterPoint(this.getPos(), this.getDirection());
@@ -172,6 +175,8 @@ public class NetworkInterface
     }
 
 
+    // Salvataggio/caricamento dati interfaccia in NBT
+
     public void save(@NonNull ValueOutput output)
     {
         if (!this.getMacAddress().equals(MacAddress.ALL_ZEROS))
@@ -186,22 +191,19 @@ public class NetworkInterface
 
         if (connected)
         {
-            output.putInt("TargetX", this.connectedTargetPos.getX());
-            output.putInt("TargetY", this.connectedTargetPos.getY());
-            output.putInt("TargetZ", this.connectedTargetPos.getZ());
-            output.putString("TargetName", this.connectedTargetName);
-            output.putString("TargetFace", this.connectedTargetFace.getName());
-            output.putString("CableType", this.connectedCableType.name());
+            output.putInt("TargetX", physicalConnectionData.connectedTargetPos.getX());
+            output.putInt("TargetY", physicalConnectionData.connectedTargetPos.getY());
+            output.putInt("TargetZ", physicalConnectionData.connectedTargetPos.getZ());
+            output.putString("TargetName", physicalConnectionData.connectedTargetName);
+            output.putString("TargetFace", physicalConnectionData.connectedTargetFace.getName());
+            output.putString("CableType", physicalConnectionData.connectedCableType.name());
         }
 
-        if (ipAddress != null && !ipAddress.equals(Ipv4Address.ALL_ZEROS))
+        if (ipAddress != null && !ipAddress.equals(Ipv4CidrAddress.ALL_ZEROS))
         {
             output.putString("IpAddress", this.ipAddress.toString());
         }
     }
-
-
-    // Salvataggio/caricamento dati interfaccia in NBT
 
     public void load(@NonNull ValueInput input)
     {
@@ -227,23 +229,21 @@ public class NetworkInterface
                 int tx = input.getInt("TargetX").orElseThrow();
                 int ty = input.getInt("TargetY").orElseThrow();
                 int tz = input.getInt("TargetZ").orElseThrow();
-                this.connectedTargetPos = new BlockPos(tx, ty, tz);
-                this.connectedTargetName = input.getString("TargetName").orElseThrow();
-                // Uso toLowerCase per sicurezza: se il nome della direzione è maiuscolo non funziona
-                String connectedTargetFaceName = input.getString("TargetFace").orElse(null);
-                if (connectedTargetFaceName != null && !connectedTargetFaceName.isEmpty())
-                {
-                    this.connectedTargetFace = Direction.byName(connectedTargetFaceName.toLowerCase());
-                }
-                else
-                {
-                    this.connectedTargetFace = null;
-                }
-                this.connectedCableType = CableType.fromName(input.getString("CableType").orElse(null));
+                BlockPos connectedTargetPos = new BlockPos(tx, ty, tz);
+
+                String connectedTargetName = input.getString("TargetName").orElseThrow();
+
+                // Se il nome della direzione è maiuscolo non funziona
+                String connectedTargetFaceName = input.getString("TargetFace").orElseThrow();
+                Direction connectedTargetFace = Direction.byName(connectedTargetFaceName.toLowerCase());
+
+                CableType connectedCableType = CableType.fromName(input.getString("CableType").orElseThrow());
+
+                connect(connectedTargetPos, connectedTargetName, connectedTargetFace, connectedCableType);
             }
             catch (Exception e)
             {
-                this.disconnect();
+                disconnect();
             }
         }
         else
@@ -251,7 +251,7 @@ public class NetworkInterface
             this.disconnect();
         }
 
-        this.ipAddress = input.getString("IpAddress").map(Ipv4Address::new).orElse(Ipv4Address.ALL_ZEROS);
+        this.ipAddress = input.getString("IpAddress").map(Ipv4CidrAddress::new).orElse(Ipv4CidrAddress.ALL_ZEROS);
     }
 
     public boolean isLoopback()
@@ -259,31 +259,33 @@ public class NetworkInterface
         return this.name.equals(LOOPBACK_NAME);
     }
 
-    public void connect(BlockPos targetPos, String targetName, @Nullable Direction connectedTargetFace, @Nullable CableType cableType)
+    public void connect(BlockPos targetPos, String targetName, Direction connectedTargetFace, CableType cableType)
     {
         if (isLoopback())
         {
+            disconnect();
+
             throw new IllegalStateException("Non puoi connettere fisicamente un'interfaccia di loopback");
         }
 
-        this.connectedTargetPos = targetPos;
-        this.connectedTargetName = targetName;
-        this.connectedTargetFace = connectedTargetFace;
-        this.connectedCableType = cableType;
+        if (targetPos == null || targetName == null || connectedTargetFace == null || cableType == null)
+        {
+            disconnect();
+
+            throw new IllegalArgumentException("Parametro null");
+        }
+
+        this.physicalConnectionData = new PhysicalConnectionData(targetPos, targetName, connectedTargetFace, cableType);
     }
 
     public void disconnect()
     {
-        this.connectedTargetPos = null;
-        this.connectedTargetName = null;
-        this.connectedTargetFace = null;
-        this.connectedCableType = null;
+        this.physicalConnectionData = null;
     }
 
     public boolean isConnected()
     {
-        boolean disconnected = connectedTargetPos == null || connectedTargetName == null;
-        return !disconnected || isLoopback();
+        return physicalConnectionData != null;
     }
 
 
@@ -312,35 +314,18 @@ public class NetworkInterface
         return macAddress;
     }
 
-    @Nullable
-    public BlockPos getConnectedTargetPos()
+    public PhysicalConnectionData getPhysicalConnectionData()
     {
-        return connectedTargetPos;
+        return physicalConnectionData;
     }
 
-    @Nullable
-    public String getConnectedTargetName()
-    {
-        return connectedTargetName;
-    }
 
-    public @Nullable Direction getConnectedTargetFace()
-    {
-        return connectedTargetFace;
-    }
-
-    @Nullable
-    public CableType getConnectedCableType()
-    {
-        return connectedCableType;
-    }
-
-    public Ipv4Address getIpAddress()
+    public Ipv4CidrAddress getIpAddress()
     {
         return ipAddress;
     }
 
-    public void setIpAddress(@NotNull Ipv4Address ipAddress)
+    public void setIpAddress(@NotNull Ipv4CidrAddress ipAddress)
     {
         this.ipAddress = ipAddress;
     }
@@ -361,20 +346,5 @@ public class NetworkInterface
     public int hashCode()
     {
         return Objects.hash(getMacAddress(), getPos(), getDirection());
-    }
-
-    @Override
-    public String toString()
-    {
-        String s = "NetworkInterface{" + "macAddress=" + macAddress + ", pos=" + pos.toShortString() + ", dir=" + direction + ", connectorType=" + connectorType;
-
-        if (isConnected())
-        {
-            s += ", connectedTargetPos=" + connectedTargetPos.toShortString() + ", connectedTargetFace=" + connectedTargetName + ", connectedCableType=" + connectedCableType;
-        }
-
-        s += '}';
-
-        return s;
     }
 }

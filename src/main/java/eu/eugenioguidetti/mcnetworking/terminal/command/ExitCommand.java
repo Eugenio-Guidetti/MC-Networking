@@ -9,6 +9,7 @@ Data: 09/06/2026
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -17,7 +18,7 @@ import net.minecraft.network.chat.Component;
 public class ExitCommand implements TerminalCommand
 {
     @Override
-    public void execute(ConsoleSession session, String[] args) throws IllegalStateException
+    public void execute(@NonNull ConsoleSession session, String @NonNull [] args) throws IllegalStateException
     {
         switch (session.getCurrentMode())
         {
@@ -34,7 +35,7 @@ public class ExitCommand implements TerminalCommand
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
         return session.getCurrentMode().equals(TerminalMode.GLOBAL_CONFIG) || session
                 .getCurrentMode()
@@ -42,7 +43,7 @@ public class ExitCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.exit").getString();
     }

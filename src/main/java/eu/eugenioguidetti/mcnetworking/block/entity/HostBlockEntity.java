@@ -14,22 +14,19 @@ import eu.eugenioguidetti.mcnetworking.simulation.logic.endDevices.EndDeviceL3En
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ApplicationPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Map;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
  * @author Eugenio Guidetti
  */
-public class HostBlockEntity extends NetworkingBlockEntity
+public class HostBlockEntity extends AbstractL3NetworkingBlockEntity
 {
     private final EndDeviceL2Engine l2Engine = new EndDeviceL2Engine(this);
     private final EndDeviceL3Engine l3Engine = new EndDeviceL3Engine(this);
@@ -50,16 +47,6 @@ public class HostBlockEntity extends NetworkingBlockEntity
         putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth0", pos, facing, ConnectorType.RJ45));
     }
 
-    public void triggerSendPacket(Ipv4Address destIp, ApplicationPayload payload)
-    {
-        if (this.level == null || this.level.isClientSide())
-        {
-            return;
-        }
-
-        stack.sendPacket(destIp, payload);
-    }
-
 
     @Override
     public int getDeviceLayer()
@@ -68,29 +55,16 @@ public class HostBlockEntity extends NetworkingBlockEntity
     }
 
 
-    public Map<Ipv4Address, MacAddress> getArpCache()
-    {
-        return l3Engine.getArpManager().getArpCache();
-    }
-
     public void setDefaultGateway(Ipv4Address dg)
     {
         l3Engine.setDefaultGateway(dg);
-    }
-
-    @Override
-    public void tickServer(Level level)
-    {
-        super.tickServer(level);
-
-        l3Engine.getArpManager().tick(this);
     }
 
 
     // --- Salvataggio/caricamento defaultGateway e dnsServer in NBT ---
 
     @Override
-    protected void saveAdditional(ValueOutput output)
+    protected void saveAdditional(@NonNull ValueOutput output)
     {
         super.saveAdditional(output);
 
@@ -105,7 +79,7 @@ public class HostBlockEntity extends NetworkingBlockEntity
     }
 
     @Override
-    protected void loadAdditional(ValueInput input)
+    protected void loadAdditional(@NonNull ValueInput input)
     {
         super.loadAdditional(input);
 

@@ -8,6 +8,7 @@ Data: 02/06/2026
 
 import eu.eugenioguidetti.mcnetworking.block.registry.ModBlockEntities;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.networkDevices.HubL2Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
 import net.minecraft.core.BlockPos;
@@ -20,9 +21,13 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public class HubBlockEntity extends NetworkingBlockEntity
 {
+    private final HubL2Engine l2Engine = new HubL2Engine(this);
+
     public HubBlockEntity(BlockPos pos, BlockState state)
     {
         super(ModBlockEntities.HUB_BLOCK_ENTITY, pos, state);
+
+        this.stack.setL2Engine(l2Engine);
 
         hostname = "Hub";
 

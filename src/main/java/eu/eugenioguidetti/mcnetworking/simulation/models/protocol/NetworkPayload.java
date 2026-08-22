@@ -6,13 +6,15 @@ Cognome: Guidetti
 Data: 02/06/2026
  */
 
+import org.jspecify.annotations.NonNull;
+
 /**
  *
  * @author Eugenio Guidetti
  */
 public interface NetworkPayload
 {
-    String getDisplayString();
+    @NonNull String getDisplayString();
 
     int getSizeInBytes();
 }

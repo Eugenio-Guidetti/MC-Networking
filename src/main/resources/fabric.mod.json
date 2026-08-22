@@ -8,7 +8,7 @@
     "Eugenio Guidetti"
   ],
   "contact": {
-    "homepage": "https://www.eugenioguidetti.eu/progetti/mc-networking/",
+    "homepage": "https://modrinth.com/mod/mc-networking",
     "sources": "https://github.com/Eugenio-Guidetti/MC-Networking",
     "issues": "https://github.com/eugenio-guidetti/mc-networking/issues"
   },
@@ -17,12 +17,10 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "eu.eugenioguidetti.mcnetworking.MCNetworking",
-      "eu.eugenioguidetti.mcnetworking.terminal.initializers.ServerTerminalPacketsInitializer"
+      "eu.eugenioguidetti.mcnetworking.MCNetworking"
     ],
     "client": [
-      "eu.eugenioguidetti.mcnetworking.client.rendering.CablesRenderPipeline",
-      "eu.eugenioguidetti.mcnetworking.terminal.initializers.ClientTerminalPacketsInitializer"
+      "eu.eugenioguidetti.mcnetworking.client.MCNetworkingClient"
     ],
     "fabric-datagen": [
       "eu.eugenioguidetti.mcnetworking.datagen.MCNetworkingDataGenerator"

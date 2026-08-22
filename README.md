@@ -35,6 +35,7 @@ The project is still under development. As of now, the following has been implem
 
 * **Protocols:**
     * `ARP` for MAC addresses resolution.
+  * `ICMP`
 
 
 * **Main CLI commands:**
@@ -42,6 +43,9 @@ The project is still under development. As of now, the following has been implem
     * `interface`: to manage network interfaces (e.g., `eth0`, `lo`).
     * `ip`: to configure the network interfaces' addresses and the default gateways on the hosts.
     * `show`: to inspect configurations, ARP caches and routes.
+  * `ping` and `traceroute`: to diagnose your networks.
+
+![Traceroute command](https://raw.githubusercontent.com/Eugenio-Guidetti/MC-Networking/refs/heads/master/screenshots/traceroute.png)
 
 ### Download
 
@@ -88,6 +92,7 @@ Il progetto è ancora in fase di sviluppo. Al momento sono stati implementati:
 
 * **Protocolli:**
     * `ARP` per la risoluzione degli indirizzi MAC.
+  * `ICMP`
 
 
 * **Comandi CLI principali:**
@@ -95,6 +100,9 @@ Il progetto è ancora in fase di sviluppo. Al momento sono stati implementati:
     * `interface`: per la gestione delle interfacce di rete (es. `eth0`, `lo`).
     * `ip`: per configurare gli indirizzi delle interfacce e i default gateway sugli host.
     * `show`: per ispezionare le configurazioni, la cache ARP e le rotte.
+  * `ping` e `traceroute`: per diagnosticare le reti.
+
+![Comando traceroute](https://raw.githubusercontent.com/Eugenio-Guidetti/MC-Networking/refs/heads/master/screenshots/traceroute.png)
 
 ### Download
 

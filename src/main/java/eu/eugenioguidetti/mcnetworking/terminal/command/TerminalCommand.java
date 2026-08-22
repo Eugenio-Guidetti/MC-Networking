@@ -7,6 +7,7 @@ Data: 07/06/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -18,10 +19,10 @@ public interface TerminalCommand
      * @param session La sessione attuale
      * @param args    Gli argomenti del comando. args[0] è il nome del comando
      */
-    void execute(ConsoleSession session, String[] args);
+    void execute(@NonNull ConsoleSession session, String @NonNull [] args);
 
     // Indica in quali modalità questo comando è valido e su quali NetworkingBlockEntity
-    boolean canRunCommand(ConsoleSession session);
+    boolean canRunCommand(@NonNull ConsoleSession session);
 
-    String getDescription(ConsoleSession session);
+    String getDescription(@NonNull ConsoleSession session);
 }

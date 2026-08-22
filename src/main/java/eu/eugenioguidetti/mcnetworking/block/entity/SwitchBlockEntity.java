@@ -23,7 +23,7 @@ import java.util.Map;
  */
 public class SwitchBlockEntity extends NetworkingBlockEntity
 {
-    private final SwitchingL2Engine l2Engine = new SwitchingL2Engine();
+    private final SwitchingL2Engine l2Engine = new SwitchingL2Engine(this);
 
     public SwitchBlockEntity(BlockPos pos, BlockState blockState)
     {

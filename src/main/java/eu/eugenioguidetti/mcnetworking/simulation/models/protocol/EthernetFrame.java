@@ -7,6 +7,7 @@ Data: 02/06/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -16,13 +17,13 @@ public record EthernetFrame(MacAddress sourceMac, MacAddress destMac, NetworkPay
 {
     public static final int ETHERNET_HEADER_LENGTH = 18;
 
-    public EthernetFrame copy()
+    public @NonNull EthernetFrame copy()
     {
         return new EthernetFrame(sourceMac, destMac, payload);
     }
 
     @Override
-    public String getDisplayString()
+    public @NonNull String getDisplayString()
     {
         return String.format("[ETH %s -> %s] %s", sourceMac, destMac, payload.getDisplayString());
     }

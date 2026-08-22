@@ -12,6 +12,7 @@ import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -20,7 +21,8 @@ import net.minecraft.network.chat.Component;
 public class InterfaceCommand implements TerminalCommand
 {
     @Override
-    public void execute(ConsoleSession session, String[] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
+    public void execute(@NonNull ConsoleSession session,
+                        String @NonNull [] args) throws ArrayIndexOutOfBoundsException, IllegalArgumentException
     {
         String message = null;
 
@@ -52,7 +54,7 @@ public class InterfaceCommand implements TerminalCommand
     }
 
     @Override
-    public boolean canRunCommand(ConsoleSession session)
+    public boolean canRunCommand(@NonNull ConsoleSession session)
     {
         return session.getCurrentMode().equals(TerminalMode.GLOBAL_CONFIG) || session
                 .getCurrentMode()
@@ -60,7 +62,7 @@ public class InterfaceCommand implements TerminalCommand
     }
 
     @Override
-    public String getDescription(ConsoleSession session)
+    public String getDescription(@NonNull ConsoleSession session)
     {
         return String.format(Component.translatable("mcnetworking.cli.command.description.interface_format").getString(),
                              TerminalMode.INTERFACE_CONFIG);

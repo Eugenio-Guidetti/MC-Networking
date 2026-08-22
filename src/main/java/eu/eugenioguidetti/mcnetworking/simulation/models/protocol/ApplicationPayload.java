@@ -6,6 +6,8 @@ Cognome: Guidetti
 Data: 02/06/2026
  */
 
+import org.jspecify.annotations.NonNull;
+
 /**
  *
  * @author Eugenio Guidetti
@@ -13,7 +15,7 @@ Data: 02/06/2026
 public record ApplicationPayload(String message) implements NetworkPayload
 {
     @Override
-    public String getDisplayString()
+    public @NonNull String getDisplayString()
     {
         return message;
     }

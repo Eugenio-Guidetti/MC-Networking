@@ -9,6 +9,7 @@ Data: 12/06/2026
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -16,7 +17,11 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload
  */
 public interface L3Engine
 {
-    void processPacket(Ipv4Packet packet, String from, NetworkStack stack);
+    void processPacket(@NonNull Ipv4Packet packet, @NonNull String from);
 
-    void sendPacket(Ipv4Address destIp, NetworkPayload payload, NetworkStack stack);
+    void sendPayload(NetworkPayload payload, Ipv4Address destIp, int ttl);
+
+    void sendPacket(@NonNull Ipv4Packet packet);
+
+    void sendPacket(@NonNull Ipv4Packet packet, AbstractL3Engine.OutPacketData outPacketData);
 }

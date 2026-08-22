@@ -6,37 +6,39 @@ Cognome: Guidetti
 Data: 12/06/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
-import eu.eugenioguidetti.mcnetworking.simulation.logic.L2Engine;
-import eu.eugenioguidetti.mcnetworking.simulation.logic.NetworkStack;
+import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.AbstractL2Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ArpPayload;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ARGB;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
  * @author Eugenio Guidetti
  */
-public class EndDeviceL2Engine implements L2Engine
+public class EndDeviceL2Engine extends AbstractL2Engine
 {
-    private final NetworkingBlockEntity netEntity;
+    private final AbstractL3NetworkingBlockEntity l3NetEntity;
 
-    public EndDeviceL2Engine(NetworkingBlockEntity netEntity)
+    public EndDeviceL2Engine(AbstractL3NetworkingBlockEntity l3NetEntity)
     {
-        this.netEntity = netEntity;
+        super(l3NetEntity);
+        this.l3NetEntity = l3NetEntity;
     }
 
 
     @Override
-    public void processFrame(EthernetFrame frame, String from, NetworkStack stack)
+    public void processFrame(@NonNull EthernetFrame frame, @NonNull String from)
     {
-        processColors(frame, from, stack);
+        processColors(frame, from);
 
-        MacAddress interfaceMac = stack.getNetworkReceiver().getInterface(from).getMacAddress();
+        MacAddress interfaceMac = l3NetEntity.getInterface(from).getMacAddress();
 
         // Il frame non è rivolto all'end device
         if (!frame.destMac().equals(interfaceMac) && !frame.destMac().equals(MacAddress.BROADCAST))
@@ -44,22 +46,32 @@ public class EndDeviceL2Engine implements L2Engine
             return;
         }
 
+        if (frame.payload() instanceof ArpPayload arp)
+        {
+            l3NetEntity.getArpManager().handleArp(arp, from);
+            return;
+        }
+
         if (frame.payload() instanceof Ipv4Packet packet)
         {
             // Passa il payload IP al livello superiore
-            stack.receivePacket(packet, from);
+            l3NetEntity.getStack().receivePacket(packet, from);
         }
     }
 
-    private void processColors(EthernetFrame frame, String from, NetworkStack stack)
+    private void processColors(@NonNull EthernetFrame frame, String from)
     {
-        MacAddress interfaceMac = stack.getNetworkReceiver().getInterface(from).getMacAddress();
+        MacAddress interfaceMac = l3NetEntity.getInterface(from).getMacAddress();
 
         int color = 0;
 
-        if (frame.destMac().equals(MacAddress.BROADCAST))
+        if (frame.payload() instanceof ArpPayload arp)
         {
-            color = ARGB.color(255, 127, 0); // Giallo
+            color = ARGB.color(0, 0, 255); // Blu
+        }
+        else if (frame.destMac().equals(MacAddress.BROADCAST))
+        {
+            color = ARGB.color(255, 127, 0); // Arancione
         }
         else if (!frame.destMac().equals(interfaceMac))
         {
@@ -71,8 +83,8 @@ public class EndDeviceL2Engine implements L2Engine
         }
 
 
-        ServerLevel serverLevel = (ServerLevel) netEntity.getLevel();
-        BlockPos pos = (netEntity.getBlockPos());
+        ServerLevel serverLevel = (ServerLevel) l3NetEntity.getLevel();
+        BlockPos pos = (l3NetEntity.getBlockPos());
 
         serverLevel.sendParticles(new DustParticleOptions(color, 1.5f), // color, scale
                                   pos.getX() + .5f, pos.getY() + 1.5f, pos.getZ() + .5f, 5,  // count

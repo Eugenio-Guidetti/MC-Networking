@@ -6,17 +6,18 @@ Cognome: Guidetti
 Data: 12/06/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
-import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
+import eu.eugenioguidetti.mcnetworking.MCNetworking;
+import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.AbstractL3Engine;
-import eu.eugenioguidetti.mcnetworking.simulation.logic.NetworkStack;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ArpPayload;
+import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4CidrAddress;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.IcmpPayload;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
-import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
-import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
-import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.DEFAULT_TTL;
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.LOOPBACK_NAME;
 
 /**
  *
@@ -24,86 +25,75 @@ import net.minecraft.network.chat.Component;
  */
 public class RoutingL3Engine extends AbstractL3Engine
 {
-    private final RoutingTable routingTable = new RoutingTable();
+    private final RoutingTable routingTable;
 
-    public RoutingL3Engine(NetworkingBlockEntity netEntity)
+    public RoutingL3Engine(AbstractL3NetworkingBlockEntity l3netEntity)
     {
-        super(netEntity);
+        super(l3netEntity);
+
+        this.routingTable = new RoutingTable(l3netEntity);
     }
 
     @Override
-    public void processPacket(Ipv4Packet packet, String from, NetworkStack stack)
+    public void processPacket(@NonNull Ipv4Packet packet, @NonNull String from)
     {
-        Ipv4Address sourceIp = packet.sourceIp();
-        Ipv4Address destIp = packet.destIp();
-        Ipv4Address interfaceIp = stack.getNetworkReceiver().getInterface(from).getIpAddress();
-
-        // Se a un'interfaccia nella rete 'A' arriva un pacchetto dalla rete 'B', lo scarta
-        if (!interfaceIp.contieneIp(sourceIp))
+        if (!shouldProcessPacket(packet, from))
         {
             return;
         }
 
-        boolean broadcast = destIp.equals(Ipv4Address.BROADCAST) || destIp.equals(interfaceIp.getIndirizzoDiBroadcast());
-        boolean perMe = (from.equals(NetworkInterface.LOOPBACK_NAME) && destIp.isIndirizzoDiLoopback());
-        for (NetworkInterface nic : stack.getNetworkReceiver().getNics().values())
-        {
-            if (nic.getIpAddress().equals(Ipv4Address.ALL_ZEROS) || nic.getName().equals(NetworkInterface.LOOPBACK_NAME))
-            {
-                continue;
-            }
+        // Pacchetto destinato al Router
 
-            perMe |= destIp.equals(nic.getIpAddress());
-        }
-
-        if (!perMe && !broadcast)
-        {
-            routePacket(packet, stack, from);
-
-            return;
-        }
-
-        if (broadcast && isInvalidBroadcast(packet, interfaceIp))
-        {
-            return;
-        }
-
-        // Il pacchetto è destinato al Router
-        NetworkPayload payload = packet.payload();
-
-        if (payload instanceof ArpPayload arp)
-        {
-            arpManager.handleArp(arp, from, stack);
-            return;
-        }
-
-        processChatMessage(packet, from, stack);
+        routePacket(packet, from);
     }
 
-    private void routePacket(Ipv4Packet packet, NetworkStack stack, String from)
+    private void routePacket(@NonNull Ipv4Packet packet, String from)
     {
         // Esegui routing
 
-        RoutingTable.Route route = routingTable.routePacket(packet.destIp(), stack.getNetworkReceiver().getNics());
+        RoutingTable.Route route = routingTable.routePacket(packet.destIp());
 
         if (route == null)
         {
-            ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-            session.sendError(String.format(Component.translatable("mcnetworking.cli.no_route_found_format").getString(),
-                                            packet.destIp().toString()));
+            sendPayload(IcmpPayload.destinationNetworkUnreachable(packet), packet.sourceIp(), DEFAULT_TTL);
 
             return;
         }
 
-        // Il pacchetto deve uscire dall'interfaccia da cui è entrato
-        if (route.nicName().equals(from))
+        // Hairpinning Il pacchetto deve uscire dall'interfaccia da cui è entrato
+        if (from.equals(route.nicName()))
         {
-            return;
+            MCNetworking.LOGGER.info("Hairpinning. TTL: {}", packet.ttl());
+
+            //return;
         }
 
         if (route.type().equals(RoutingTable.RouteType.L))
         {
-            processPacket(packet, route.nicName(), stack);
+            Ipv4Address destIp = packet.destIp();
+            Ipv4CidrAddress nicIp = l3netEntity.getInterface(from).getIpAddress();
+            Ipv4CidrAddress routeNicIp = l3netEntity.getInterface(route.nicName()).getIpAddress();
+
+            if (!nicIp.contieneIp(packet.sourceIp()))
+            {
+                return;
+            }
+
+            if (destIp.equals(Ipv4Address.BROADCAST) || destIp.equals(routeNicIp.address()) || destIp.equals(routeNicIp
+                                                                                                                     .getIndirizzoDiBroadcast()
+                                                                                                                     .address()) || destIp.isLoopback())
+            {
+                // Pacchetto destinato al router
+                handleLocalPayload(packet, route.nicName());
+            }
+            return;
+        }
+
+
+        if (packet.ttl() <= 1)
+        {
+            sendPayload(IcmpPayload.timeExceeded(packet), packet.sourceIp(), DEFAULT_TTL);
+
             return;
         }
 
@@ -119,54 +109,46 @@ public class RoutingL3Engine extends AbstractL3Engine
 
         String outName = route.nicName();
 
-        dispatchToL2(packet, nextHop, outName, stack);
+        sendPacket(packet.decreaseTtl(), new OutPacketData(nextHop, outName));
     }
 
 
     @Override
-    public void sendPacket(Ipv4Address destIp, NetworkPayload payload, NetworkStack stack)
+    protected void handleHigherLayerPayload(Ipv4Packet packet, String from)
     {
-        // Determino nextHop e interfaccia di uscita del pacchetto
+        processChatMessage(packet, from);
 
-        String outName = null;
-        Ipv4Address nextHop = null;
-
-        if (destIp.isIndirizzoDiLoopback())
-        {
-            outName = NetworkInterface.LOOPBACK_NAME;
-            nextHop = Ipv4Address.LOOPBACK;
-        }
-        else
-        {
-            // Controllo se il destinatario è in una rete direttamente connessa a me
-            outName = getOutName(destIp, stack);
-
-            if (outName != null)
-            {
-                // Rete di destinazione direttamente connessa
-                int lunghezzaPrefisso = stack.getNetworkReceiver().getInterface(outName).getIpAddress().getLunghezzaPrefisso();
-                nextHop = new Ipv4Address(destIp.getIp(), lunghezzaPrefisso);
-            }
-            else
-            {
-                // Rete di destinazione non direttamente connessa: consulta tabella di routing
-                RoutingTable.Route route = routingTable.routePacket(destIp, stack.getNetworkReceiver().getNics());
-
-                if (route == null)
-                {
-                    ConsoleSession session = TerminalCache.getOrCreateSession(netEntity).session();
-                    session.sendError(String.format(Component.translatable("mcnetworking.cli.no_route_found_format").getString(), destIp));
-
-                    return;
-                }
-
-                outName = route.nicName();
-                nextHop = route.nextHop();
-            }
-        }
-
-        sendPacketOut(destIp, payload, nextHop, outName, stack);
+        // TODO: I router scartano i messaggi applicativi, tranne SSH e Telnet, che verranno gestiti qui
     }
+
+    @Override
+    protected @Nullable OutPacketData findOutPacketData(@NonNull Ipv4Address destIp) throws IllegalArgumentException
+    {
+        if (destIp.isAllZeros() || destIp.isBroadcast())
+        {
+            return null;
+        }
+
+        if (destIp.isLoopback())
+        {
+            return new AbstractL3Engine.OutPacketData(Ipv4Address.LOOPBACK, LOOPBACK_NAME);
+        }
+
+        RoutingTable.Route route = routingTable.routePacket(destIp);
+
+        if (route == null)
+        {
+            return null;
+        }
+
+        if (route.type().equals(RoutingTable.RouteType.L) || route.type().equals(RoutingTable.RouteType.C))
+        {
+            return new OutPacketData(destIp, route.nicName());
+        }
+
+        return new OutPacketData(route.nextHop(), route.nicName());
+    }
+
 
     public RoutingTable getRoutingTable()
     {

@@ -6,249 +6,57 @@ Cognome: Guidetti
 Data: 02/06/2026
  */
 
-import java.util.Objects;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
- * Rappresenta un indirizzo IPv4 e la relativa Subnet Mask.
- *
  * @author Eugenio Guidetti
  */
-public class Ipv4Address
+public record Ipv4Address(int rawIp)
 {
-    public static final Ipv4Address ALL_ZEROS = new Ipv4Address(0x00000000, 0);
-    public static final Ipv4Address BROADCAST = new Ipv4Address(0xFFFFFFFF, 32);
-    public static final Ipv4Address LOOPBACK = new Ipv4Address(0x7F000001, 8);
+    public static final Ipv4Address ALL_ZEROS = new Ipv4Address(0x00000000);
+    public static final Ipv4Address BROADCAST = new Ipv4Address(0xFFFFFFFF);
+    public static final Ipv4Address LOOPBACK = new Ipv4Address(0x7F000001);
 
-    private final int ip;
-    private final int lunghezzaPrefisso;
 
-    public Ipv4Address(int ip, int lunghezzaPrefisso)
+    /**
+     *
+     * @param ipString la stringa in notazione decimale puntata rappresentante l'indirizzo IPv4 da creare (es. {@code 192.168.1.0})
+     */
+    public Ipv4Address(String ipString)
     {
-        this.ip = ip;
-
-        if (lunghezzaPrefisso < 0 || lunghezzaPrefisso > 32)
-        {
-            throw new IllegalArgumentException("lunghezzaPrefisso invalida");
-        }
-
-        this.lunghezzaPrefisso = lunghezzaPrefisso;
+        this(Ipv4.parseIp(ipString));
     }
 
-    public Ipv4Address(String cidrAddress)
+
+    public boolean isLoopback()
     {
-        if (cidrAddress == null || cidrAddress.isEmpty())
-        {
-            throw new IllegalArgumentException("cidrAddress vuoto");
-        }
-
-        String[] parti = cidrAddress.split("/");
-
-        if (parti.length > 2)
-        {
-            throw new IllegalArgumentException("cidrAddress invalido");
-        }
-
-        this.ip = parseIp(parti[0]);
-
-        int lunghezzaPrefisso;
-
-        if (parti.length == 2)
-        {
-            lunghezzaPrefisso = Integer.parseInt(parti[1]);
-            if (lunghezzaPrefisso < 0 || lunghezzaPrefisso > 32)
-            {
-                throw new IllegalArgumentException("lunghezzaPrefisso invalida");
-            }
-        }
-        else
-        {
-            lunghezzaPrefisso = 32; // Host singolo
-        }
-
-        this.lunghezzaPrefisso = lunghezzaPrefisso;
+        return ((this.rawIp >> 24) & 0x000000FF) == 127;
     }
 
-    public Ipv4Address(String ip, String subnetMask)
+    public boolean isAllZeros()
     {
-        if (ip == null || ip.isEmpty())
-        {
-            throw new IllegalArgumentException("ip vuoto");
-        }
-        if (subnetMask == null || subnetMask.isEmpty())
-        {
-            throw new IllegalArgumentException("subnetMask vuota");
-        }
-
-        this.ip = parseIp(ip);
-        this.lunghezzaPrefisso = getLunghezzaPrefisso(parseIp(subnetMask));
+        return ALL_ZEROS.equals(this);
     }
 
-    public static int parseIp(String ipString)
+    public boolean isBroadcast()
     {
-        int ip = 0;
-
-        if (ipString == null || ipString.isEmpty())
-        {
-            throw new IllegalArgumentException("ip vuoto");
-        }
-
-        String[] ottetti = ipString.split("\\.");
-
-        if (ottetti.length != 4)
-        {
-            throw new IllegalArgumentException("Numero di ottetti errato");
-        }
-
-        for (int i = 0; i < 4; i++)
-        {
-            int ottetto = Integer.parseInt(ottetti[i]);
-
-            if (ottetto < 0 || ottetto > 255)
-            {
-                throw new IllegalArgumentException("Valore ottetto errato");
-            }
-
-            ip <<= 8;
-            ip |= ottetto;
-        }
-
-        return ip;
+        return BROADCAST.equals(this);
     }
 
-    public static String formatIpToString(int ip)
+
+    /**
+     *
+     * @return La rappresentazione in notazione decimale puntata di questo indirizzo ip
+     */
+    public @NonNull String getIpString()
     {
-        return String.format("%d.%d.%d.%d", (ip >> 24) & 0x000000FF, (ip >> 16) & 0x000000FF, (ip >> 8) & 0x000000FF, ip & 0x000000FF);
-    }
-
-    public static int getSubnetMask(int lunghezzaPrefisso)
-    {
-        if (lunghezzaPrefisso == 0)
-        {
-            return 0;
-        }
-
-        return 0xFFFFFFFF << (32 - lunghezzaPrefisso);
-    }
-
-    public static int getLunghezzaPrefisso(int subnetMask)
-    {
-        int bitCount = Integer.bitCount(subnetMask);
-
-        if (getSubnetMask(bitCount) != subnetMask)
-        {
-            throw new IllegalArgumentException("subnetMask invalida");
-        }
-
-        return bitCount;
-    }
-
-    public int getIp()
-    {
-        return this.ip;
-    }
-
-    public String getIpString()
-    {
-        return formatIpToString(this.ip);
-    }
-
-    public int getLunghezzaPrefisso()
-    {
-        return this.lunghezzaPrefisso;
-    }
-
-    public String getSubnetMaskString()
-    {
-        return formatIpToString(getSubnetMask(this.lunghezzaPrefisso));
-    }
-
-    public Ipv4Address getIndirizzoDiRete()
-    {
-        int ipRete = this.ip & getSubnetMask(this.lunghezzaPrefisso);
-        return new Ipv4Address(ipRete, this.lunghezzaPrefisso);
-    }
-
-    public boolean isIndirizzoDiRete()
-    {
-        if (this.lunghezzaPrefisso >= 31)
-        {
-            return false;
-        }
-
-        return this.ip == getIndirizzoDiRete().ip;
-    }
-
-    public Ipv4Address getIndirizzoDiBroadcast()
-    {
-        return this.getIndirizzoDiBroadcast(this.lunghezzaPrefisso);
-    }
-
-    public Ipv4Address getIndirizzoDiBroadcast(int lunghezzaPrefisso)
-    {
-        int ipBroadcast = this.ip | ~getSubnetMask(lunghezzaPrefisso);
-        return new Ipv4Address(ipBroadcast, lunghezzaPrefisso);
-    }
-
-    public boolean isIndirizzoDiBroadcast()
-    {
-        return this.isIndirizzoDiBroadcast(this.lunghezzaPrefisso);
-    }
-
-    public boolean isIndirizzoDiBroadcast(int lunghezzaPrefisso)
-    {
-        if (this.ip == 0xFFFFFFFF)
-        {
-            return true;
-        }
-        if (lunghezzaPrefisso >= 31)
-        {
-            return false;
-        }
-
-        return this.ip == getIndirizzoDiBroadcast(lunghezzaPrefisso).ip;
-    }
-
-    public boolean isIndirizzoDiLoopback()
-    {
-        return ((this.ip >> 24) & 0x000000FF) == 127;
-    }
-
-    public boolean contieneIp(Ipv4Address altroIp)
-    {
-        if (altroIp == null)
-        {
-            return false;
-        }
-
-        int netMask = this.lunghezzaPrefisso == 0 ? 0 : 0xFFFFFFFF << (32 - this.lunghezzaPrefisso);
-
-        int ipRete1 = this.ip & netMask;
-        int ipRete2 = altroIp.ip & netMask;
-
-        return ipRete1 == ipRete2;
+        return Ipv4.formatRawIpToString(this.rawIp);
     }
 
     @Override
-    public String toString()
+    public @NonNull String toString()
     {
-        return getIpString() + "/" + this.lunghezzaPrefisso;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (o == null || getClass() != o.getClass())
-        {
-            return false;
-        }
-        Ipv4Address that = (Ipv4Address) o;
-        return ip == that.ip;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hashCode(ip);
+        return getIpString();
     }
 }
