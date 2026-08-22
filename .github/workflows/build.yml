@@ -54,9 +54,12 @@ jobs:
           modrinth-id: 'PsNb5dTq'
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
           # Specifica il jar da caricare (attenzione a non includere i -dev.jar o -sources.jar se non li vuoi su Modrinth)
-          files: build/libs/!(*-dev|-sources).jar
-          name: ${{ github.ref_name }}-26.2 - MC-Networking
-          version: ${{ github.ref_name }}-26.2
+          files: |
+            build/libs/*.jar
+            !build/libs/*-dev.jar
+            !build/libs/*-sources.jar
+          name: ${{ github.ref_name }} - MC-Networking
+          version: ${{ github.ref_name }}
           version-type: release
           changelog-file: CHANGELOG.md
           loaders: fabric
