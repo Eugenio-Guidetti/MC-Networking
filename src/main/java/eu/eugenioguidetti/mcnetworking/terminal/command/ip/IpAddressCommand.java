@@ -85,8 +85,9 @@ public class IpAddressCommand implements TerminalCommand
             }
         }
 
-        l3NetEntity.sendGratuitousArpRequest(session.getSelectedInterface().getName());
         session.getSelectedInterface().setIpAddress(newIp);
+
+        l3NetEntity.sendGratuitousArpRequest(session.getSelectedInterface().getName());
     }
 
     @Override

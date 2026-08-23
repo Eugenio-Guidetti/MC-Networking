@@ -6,6 +6,7 @@ Cognome: Guidetti
 Data: 21/08/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.networking.packet.CommandCompletionS2CPayload;
 import eu.eugenioguidetti.mcnetworking.networking.packet.OpenTerminalS2CPayload;
 import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalOutputS2CPayload;
 import eu.eugenioguidetti.mcnetworking.terminal.gui.TerminalScreen;
@@ -23,6 +24,8 @@ public class ClientboundPackets
     {
         ClientPlayNetworking.registerGlobalReceiver(OpenTerminalS2CPayload.TYPE, ClientboundPackets::handleOpenTerminalS2CPacket);
         ClientPlayNetworking.registerGlobalReceiver(TerminalOutputS2CPayload.TYPE, ClientboundPackets::handleTerminalOutputS2CPacket);
+        ClientPlayNetworking.registerGlobalReceiver(CommandCompletionS2CPayload.TYPE,
+                                                    ClientboundPackets::handleCommandCompletionS2CPayload);
     }
 
     public static void handleOpenTerminalS2CPacket(@NonNull OpenTerminalS2CPayload payload, ClientPlayNetworking.@NonNull Context context)
@@ -39,6 +42,21 @@ public class ClientboundPackets
         {
             // Aggiungiamo l'output ricevuto dal server allo storico della UI
             terminalScreen.updateOutput(payload);
+        }
+    }
+
+    public static void handleCommandCompletionS2CPayload(@NonNull CommandCompletionS2CPayload payload,
+                                                         ClientPlayNetworking.@NonNull Context context)
+    {
+        Minecraft client = Minecraft.getInstance();
+
+        if (client.gui.screen() instanceof TerminalScreen terminalScreen)
+        {
+            // Aggiungiamo l'output ricevuto dal server allo storico della UI
+            if (!terminalScreen.getInputFieldValue().startsWith(payload.autocompleted()))
+            {
+                terminalScreen.setInputFieldValue(payload.autocompleted());
+            }
         }
     }
 }

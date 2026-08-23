@@ -6,10 +6,7 @@ Cognome: Guidetti
 Data: 07/06/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.networking.packet.OpenTerminalS2CPayload;
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalCommandC2SPayload;
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalOutputS2CPayload;
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalSignalC2SPayload;
+import eu.eugenioguidetti.mcnetworking.networking.packet.*;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalSignal;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -263,6 +260,10 @@ public class TerminalScreen extends Screen
 
             if (event.key() == GLFW.GLFW_KEY_TAB)
             {
+                this.inputField.setValue(this.inputField.getValue().stripLeading());
+
+                ClientPlayNetworking.send(new CommandCompletionC2SPayload(this.inputField.getValue(), pos));
+
                 return true;
             }
         }
@@ -408,5 +409,15 @@ public class TerminalScreen extends Screen
         }
 
         this.init();
+    }
+
+    public String getInputFieldValue()
+    {
+        return this.inputField.getValue();
+    }
+
+    public void setInputFieldValue(@NonNull String value)
+    {
+        this.inputField.setValue(value);
     }
 }

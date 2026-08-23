@@ -66,6 +66,8 @@ public class ModItalianLangProvider extends FabricLanguageProvider
                                "Benvenuto nel sistema operativo MCNetworking\nDigita \"help\" per iniziare\n\n");
 
         translationBuilder.add("mcnetworking.cli.unknown_command_format", "Comando sconosciuto: %s\n");
+        translationBuilder.add("mcnetworking.cli.ambiguous_command_format", "Comando ambiguo: %s\n");
+        translationBuilder.add("mcnetworking.cli.incomplete_command_format", "Comando incompleto: %s\n");
 
         translationBuilder.add("mcnetworking.cli.error_format", "§4Errore: %s\n");
         translationBuilder.add("mcnetworking.cli.missing_argument_error_format", "Argomento mancante: %s");
@@ -81,6 +83,7 @@ public class ModItalianLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.arp_request_timeout_format", "ARP request scaduta: Scartati pacchetti diretti a: %s\n");
 
         translationBuilder.add("mcnetworking.cli.command.available_commands", "Comandi disponibili: ");
+        translationBuilder.add("mcnetworking.cli.command.no_available_commands_format", "Nessun comando disponibile con: %s\n");
 
         translationBuilder.add("mcnetworking.cli.command.interface_not_found_format", "Interfaccia: %s non trovata");
 

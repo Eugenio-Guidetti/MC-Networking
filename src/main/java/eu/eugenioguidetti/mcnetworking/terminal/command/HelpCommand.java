@@ -6,11 +6,11 @@ Cognome: Guidetti
 Data: 09/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.Utils;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,36 +31,30 @@ public class HelpCommand implements TerminalCommand
     @Override
     public void execute(@NonNull ConsoleSession session, String @NonNull [] args)
     {
-        if (args.length > 1)
+        String draftCommand;
+        if (args.length <= 1)
         {
-            session.sendOutput(showCommandDescription(session, args[1]));
-            return;
+            draftCommand = "";
+        }
+        else
+        {
+            draftCommand = args[1];
         }
 
-        List<String> commands = new ArrayList<>();
+        List<String> commands = CommandRegistrar.matchCommands(session, entries, draftCommand);
 
-        for (Map.Entry<String, TerminalCommand> entry : entries)
+        String output;
+
+        if (commands.size() == 1)
         {
-            if (entry.getValue().canRunCommand(session))
-            {
-                commands.add(entry.getKey());
-            }
+            output = showCommandDescription(session, commands.getFirst());
+        }
+        else
+        {
+            output = Utils.listAvailableCommands(commands, draftCommand);
         }
 
-        commands.sort(String::compareTo);
-
-        StringBuilder sb = new StringBuilder(Component.translatable("mcnetworking.cli.command.available_commands").getString());
-        sb.append(commands.getFirst());
-
-        for (int i = 1; i < commands.size(); i++)
-        {
-            sb.append(", ");
-            sb.append(commands.get(i));
-        }
-
-        sb.append("\n");
-
-        session.sendOutput(sb.toString());
+        session.sendOutput(output);
     }
 
     private String showCommandDescription(ConsoleSession session, String commandName)

@@ -11,11 +11,13 @@ import eu.eugenioguidetti.mcnetworking.simulation.logic.AbstractL3Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 
 import static eu.eugenioguidetti.mcnetworking.GlobalConstants.LOOPBACK_NAME;
 
@@ -67,5 +69,28 @@ public abstract class Utils
         }
 
         return null;
+    }
+
+
+    public static @NonNull String listAvailableCommands(List<String> commands, String draftCommand)
+    {
+        if (commands == null || commands.isEmpty())
+        {
+            return String.format(Component.translatable("mcnetworking.cli.command.no_available_commands_format").getString(), draftCommand);
+        }
+
+        commands.sort(String::compareTo);
+
+        StringBuilder sb = new StringBuilder(Component.translatable("mcnetworking.cli.command.available_commands").getString());
+        sb.append(commands.getFirst());
+
+        for (int i = 1; i < commands.size(); i++)
+        {
+            sb.append(", ");
+            sb.append(commands.get(i));
+        }
+
+        sb.append("\n");
+        return sb.toString();
     }
 }

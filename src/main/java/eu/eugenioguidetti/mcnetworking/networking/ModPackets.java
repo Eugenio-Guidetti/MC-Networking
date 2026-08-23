@@ -7,10 +7,7 @@ Data: 21/08/2026
  */
 
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
-import eu.eugenioguidetti.mcnetworking.networking.packet.OpenTerminalS2CPayload;
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalCommandC2SPayload;
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalOutputS2CPayload;
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalSignalC2SPayload;
+import eu.eugenioguidetti.mcnetworking.networking.packet.*;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -28,6 +25,7 @@ public class ModPackets
 
         registry.register(OpenTerminalS2CPayload.TYPE, OpenTerminalS2CPayload.CODEC);
         registry.register(TerminalOutputS2CPayload.TYPE, TerminalOutputS2CPayload.CODEC);
+        registry.register(CommandCompletionS2CPayload.TYPE, CommandCompletionS2CPayload.CODEC);
 
         // I GlobalReceiver vengono registrati solo sul client nella classe ClientBoundPackets
     }
@@ -38,9 +36,12 @@ public class ModPackets
 
         registry.register(TerminalCommandC2SPayload.TYPE, TerminalCommandC2SPayload.CODEC);
         registry.register(TerminalSignalC2SPayload.TYPE, TerminalSignalC2SPayload.CODEC);
+        registry.register(CommandCompletionC2SPayload.TYPE, CommandCompletionC2SPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(TerminalCommandC2SPayload.TYPE, ServerboundPackets::handleTerminalCommandC2SPacket);
         ServerPlayNetworking.registerGlobalReceiver(TerminalSignalC2SPayload.TYPE, ServerboundPackets::handleTerminalSignalC2SPacket);
+        ServerPlayNetworking.registerGlobalReceiver(CommandCompletionC2SPayload.TYPE,
+                                                    ServerboundPackets::handleCommandCompletionC2SPayload);
     }
 
     public static void registerPackets()

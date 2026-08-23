@@ -6,9 +6,8 @@ Cognome: Guidetti
 Data: 21/08/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalCommandC2SPayload;
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalOutputS2CPayload;
-import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalSignalC2SPayload;
+import eu.eugenioguidetti.mcnetworking.Utils;
+import eu.eugenioguidetti.mcnetworking.networking.packet.*;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.Job;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
@@ -89,5 +88,27 @@ public class ServerboundPackets
         };
 
         session.sendOutput(text);
+    }
+
+    public static void handleCommandCompletionC2SPayload(@NonNull CommandCompletionC2SPayload payload,
+                                                         ServerPlayNetworking.@NonNull Context context)
+    {
+        GlobalPos globalPos = payload.pos();
+        ServerLevel level = context.server().getLevel(globalPos.dimension());
+        BlockPos pos = globalPos.pos();
+
+        ConsoleSession session = TerminalCache.getOrCreateSession(level, pos).session();
+
+        List<String> foundCommands = commands.autocompleteCommand(session, payload.draftCommand());
+
+        if (foundCommands.size() == 1)
+        {
+            ServerPlayNetworking.send(context.player(), new CommandCompletionS2CPayload(foundCommands.getFirst() + " "));
+        }
+        else
+        {
+            String availableCommands = Utils.listAvailableCommands(foundCommands, payload.draftCommand());
+            session.sendOutput(availableCommands);
+        }
     }
 }
