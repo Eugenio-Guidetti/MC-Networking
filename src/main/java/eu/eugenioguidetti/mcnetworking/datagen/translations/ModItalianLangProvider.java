@@ -68,6 +68,7 @@ public class ModItalianLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.unknown_command_format", "Comando sconosciuto: %s\n");
         translationBuilder.add("mcnetworking.cli.ambiguous_command_format", "Comando ambiguo: %s\n");
         translationBuilder.add("mcnetworking.cli.incomplete_command_format", "Comando incompleto: %s\n");
+        translationBuilder.add("mcnetworking.cli.cannot_undo_command_format", "Comando non annullabile: %s\n");
 
         translationBuilder.add("mcnetworking.cli.error_format", "§4Errore: %s\n");
         translationBuilder.add("mcnetworking.cli.missing_argument_error_format", "Argomento mancante: %s");
@@ -109,10 +110,11 @@ public class ModItalianLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.command.network_already_connected",
                                "Un'altra interfaccia ha già un indirizzo in questa rete");
 
-        translationBuilder.add("mcnetworking.cli.command.invalid_dest_network", "Indirizzo della rete di destinazione invalido");
-        translationBuilder.add("mcnetworking.cli.command.invalid_next_hop", "Indirizzo del next hop invalido");
-        translationBuilder.add("mcnetworking.cli.command.invalid_next_hop_this_router",
+        translationBuilder.add("mcnetworking.cli.command.ip.route.invalid_dest_network", "Indirizzo della rete di destinazione invalido");
+        translationBuilder.add("mcnetworking.cli.command.ip.route.invalid_next_hop", "Indirizzo del next hop invalido");
+        translationBuilder.add("mcnetworking.cli.command.ip.route.invalid_next_hop_this_router",
                                "Indirizzo del next hop invalido (appartiene a questo router)");
+        translationBuilder.add("mcnetworking.cli.command.ip.route.cannot_remove_route_format", "La rotta %s non può essere rimossa");
 
         translationBuilder.add("mcnetworking.cli.command.show.mac.output_format", " MAC: %s\n");
         translationBuilder.add("mcnetworking.cli.command.show.ip.output_format", " IP: %s\n");
@@ -138,6 +140,7 @@ public class ModItalianLangProvider extends FabricLanguageProvider
 
         translationBuilder.add("mcnetworking.cli.command.description.help",
                                "help Mostra i comandi disponibili\nhelp <comando> Mostra come usare il comando specificato\n");
+        translationBuilder.add("mcnetworking.cli.command.description.no", "no <comando> annulla il comando specificato\n");
         translationBuilder.add("mcnetworking.cli.command.description.clear", "clear Pulisce il terminale\n");
         translationBuilder.add("mcnetworking.cli.command.description.configure_format",
                                "configure Va alla modalità di configurazione %s\n");
@@ -149,7 +152,7 @@ public class ModItalianLangProvider extends FabricLanguageProvider
                                "interface <nome_interfaccia | direzione_interfaccia> Va alla modalità di configurazione %s per l'interfaccia specificata\n");
 
         translationBuilder.add("mcnetworking.cli.command.description.ip",
-                               "Configurazione IP\nip help Mostra le configurazioni ip disponibili\nip help <configurazione> Mostra come usare la configurazione ip specificata\n");
+                               "Configurazione IP\nhelp ip <configurazione> Mostra come usare la configurazione ip specificata\n");
         translationBuilder.add("mcnetworking.cli.command.description.ip.address",
                                "ip address <indirizzo> Assegna un indirizzo IP all'interfaccia\n");
         translationBuilder.add("mcnetworking.cli.command.description.ip.default_gateway",
@@ -161,7 +164,7 @@ public class ModItalianLangProvider extends FabricLanguageProvider
                                "ping <ip_destinazione> [invii] Invia echo request ICMP all'indirizzo ip specificato\n");
 
         translationBuilder.add("mcnetworking.cli.command.description.show",
-                               "Informazioni sull'apparato\nshow help Mostra le opzioni disponibili\nshow help <opzione> Mostra quali informazioni contiene l'opzione specificata\n");
+                               "Informazioni sull'apparato\nhelp show <opzione> Mostra quali informazioni contiene l'opzione specificata\n");
         translationBuilder.add("mcnetworking.cli.command.description.show.mac",
                                "show mac Mostra l'indirizzo MAC dell'interfaccia selezionata\n");
         translationBuilder.add("mcnetworking.cli.command.description.show.ip",

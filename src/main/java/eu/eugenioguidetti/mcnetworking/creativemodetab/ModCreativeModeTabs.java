@@ -17,6 +17,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
+import org.jspecify.annotations.NonNull;
 
 /**
  *
@@ -50,9 +51,9 @@ public class ModCreativeModeTabs
                                                                                              output.accept(ModBlocks.ROUTER_BLOCK);
                                                                                          });
 
-    private static CreativeModeTab registerModCreativeModeTab(String name,
-                                                              ItemLike icon,
-                                                              CreativeModeTab.DisplayItemsGenerator displayItems)
+    private static @NonNull CreativeModeTab registerModCreativeModeTab(String name,
+                                                                       ItemLike icon,
+                                                                       CreativeModeTab.DisplayItemsGenerator displayItems)
     {
         return Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB,
                                  Identifier.fromNamespaceAndPath(MCNetworking.MOD_ID, name),

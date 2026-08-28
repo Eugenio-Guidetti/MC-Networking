@@ -11,9 +11,8 @@ import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  *
@@ -21,15 +20,20 @@ import java.util.Set;
  */
 public class HelpCommand implements TerminalCommand
 {
-    Set<Map.Entry<String, TerminalCommand>> entries = null;
+    private final CommandRegistrar registrar;
 
-    public HelpCommand(Set<Map.Entry<String, TerminalCommand>> entries)
+    public HelpCommand(CommandRegistrar registrar)
     {
-        this.entries = entries;
+        this.registrar = registrar;
     }
 
     @Override
     public void execute(@NonNull ConsoleSession session, String @NonNull [] args)
+    {
+        executeCommand(session, this.registrar, args);
+    }
+
+    private void executeCommand(@NonNull ConsoleSession session, CommandRegistrar registrar, String @NonNull [] args)
     {
         String draftCommand;
         if (args.length <= 1)
@@ -41,33 +45,40 @@ public class HelpCommand implements TerminalCommand
             draftCommand = args[1];
         }
 
-        List<String> commands = CommandRegistrar.matchCommands(session, entries, draftCommand);
+        List<String> matchedCommands = registrar.matchCommands(session, draftCommand);
 
         String output;
-
-        if (commands.size() == 1)
+        if (matchedCommands.size() == 1)
         {
-            output = showCommandDescription(session, commands.getFirst());
+            TerminalCommand command = registrar.getCommand(matchedCommands.getFirst(), session);
+
+            if (command == null)
+            {
+                output = String.format(Component.translatable("mcnetworking.cli.unknown_command_format").getString(),
+                                       matchedCommands.getFirst());
+                return;
+            }
+
+            if (command instanceof CommandRegistrar nestedRegistrar && args.length > 2)
+            {
+                String[] newArgs = Arrays.copyOfRange(args, 1, args.length);
+                newArgs[0] = args[0];
+
+                executeCommand(session, nestedRegistrar, newArgs);
+
+                return;
+            }
+            else
+            {
+                output = command.getDescription(session);
+            }
         }
         else
         {
-            output = Utils.listAvailableCommands(commands, draftCommand);
+            output = Utils.listAvailableCommands(matchedCommands, draftCommand);
         }
 
         session.sendOutput(output);
-    }
-
-    private String showCommandDescription(ConsoleSession session, String commandName)
-    {
-        for (Map.Entry<String, TerminalCommand> entry : entries)
-        {
-            if (entry.getKey().equals(commandName) && entry.getValue().canRunCommand(session))
-            {
-                return entry.getValue().getDescription(session);
-            }
-        }
-
-        return String.format(Component.translatable("mcnetworking.cli.unknown_command_format").getString(), commandName);
     }
 
     @Override

@@ -55,6 +55,21 @@ public class ArpManager
             MacAddress interfaceMac = l3NetEntity.getInterface(from).getMacAddress();
             Ipv4CidrAddress interfaceIp = l3NetEntity.getInterface(from).getIpAddress();
 
+            // GratuitousArpRequest con ipSorgente 0.0.0.0 -> rimuovi macSorgente dalla arpCache
+            if (arp.senderIp().isAllZeros())
+            {
+                for (var entry : arpCache.entrySet())
+                {
+                    if (entry.getValue().equals(arp.senderMac()))
+                    {
+                        arpCache.remove(entry.getKey());
+                        break;
+                    }
+                }
+
+                return;
+            }
+
             if (!interfaceIp.contieneIp(arp.senderIp()))
             {
                 return;

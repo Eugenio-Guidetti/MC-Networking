@@ -10,7 +10,7 @@ import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
-import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
+import eu.eugenioguidetti.mcnetworking.terminal.command.UndoableTerminalCommand;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 
@@ -18,7 +18,7 @@ import org.jspecify.annotations.NonNull;
  *
  * @author Eugenio Guidetti
  */
-public class IpDefaultGatewayCommand implements TerminalCommand
+public class IpDefaultGatewayCommand implements UndoableTerminalCommand
 {
     @Override
     public void execute(@NonNull ConsoleSession session,
@@ -54,5 +54,19 @@ public class IpDefaultGatewayCommand implements TerminalCommand
     public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.ip.default_gateway").getString();
+    }
+
+    @Override
+    public void undo(@NonNull ConsoleSession session, String @NonNull [] args)
+    {
+        if (!(session.getDevice() instanceof HostBlockEntity host))
+        {
+            throw new IllegalStateException(String.format(Component
+                                                                  .translatable(
+                                                                          "mcnetworking.cli.command.cant_assign_default_gateway_to_format")
+                                                                  .getString(), session.getDevice().getClass().getSimpleName()));
+        }
+
+        host.setDefaultGateway(Ipv4Address.ALL_ZEROS);
     }
 }

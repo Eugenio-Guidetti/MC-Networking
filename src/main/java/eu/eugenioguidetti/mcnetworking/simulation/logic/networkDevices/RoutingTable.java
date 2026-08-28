@@ -10,6 +10,7 @@ import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEnt
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4CidrAddress;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.NonNull;
@@ -46,9 +47,30 @@ public class RoutingTable
         table.add(r);
     }
 
-    public void removeRoute(Ipv4CidrAddress destNetwork)
+    private void removeRoute(Ipv4CidrAddress destNetwork)
     {
         table.removeIf(r -> r.destNetwork.equals(destNetwork));
+    }
+
+    public void removeStaticRoute(Ipv4CidrAddress destNetwork)
+    {
+        for (Route r : getRoutes())
+        {
+            if (!r.destNetwork.equals(destNetwork))
+            {
+                continue;
+            }
+
+            if (!r.type.equals(RouteType.S))
+            {
+                throw new IllegalArgumentException(String.format(Component
+                                                                         .translatable(
+                                                                                 "mcnetworking.cli.command.ip.route.cannot_remove_route_format")
+                                                                         .getString(), r));
+            }
+
+            table.remove(r);
+        }
     }
 
     public List<Route> getRoutes()

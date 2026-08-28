@@ -11,6 +11,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.NonNull;
 
 import java.util.function.UnaryOperator;
 
@@ -24,8 +25,8 @@ public class ModDataComponentTypes
                                                                                                                builder -> builder.persistent(
                                                                                                                        PendingConnection.CODEC));
 
-    private static <T> DataComponentType<T> registerModDataComponentType(String name,
-                                                                         UnaryOperator<DataComponentType.Builder<T>> builderOperator)
+    private static <T> @NonNull DataComponentType<T> registerModDataComponentType(String name,
+                                                                                  UnaryOperator<DataComponentType.Builder<T>> builderOperator)
     {
         return Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
                                  Identifier.fromNamespaceAndPath(MCNetworking.MOD_ID, name),

@@ -20,6 +20,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import org.jspecify.annotations.NonNull;
 
 import java.util.function.Function;
 
@@ -40,12 +41,12 @@ public class ModBlocks
                                                            BlockBehaviour.Properties.of().strength(4),
                                                            true);
 
-    public static ResourceKey<Block> getRK(Block block)
+    public static @NonNull ResourceKey<Block> getRK(Block block)
     {
         return BuiltInRegistries.BLOCK.getResourceKey(block).orElseThrow();
     }
 
-    private static Block registerBlock(String name,
+    private static @NonNull Block registerBlock(String name,
                                        Function<BlockBehaviour.Properties, Block> blockFactory,
                                        BlockBehaviour.Properties settings,
                                        boolean shouldRegisterItem)
@@ -70,12 +71,12 @@ public class ModBlocks
         return Registry.register(BuiltInRegistries.BLOCK, blockKey, block);
     }
 
-    private static ResourceKey<Block> keyOfBlock(String name)
+    private static @NonNull ResourceKey<Block> keyOfBlock(String name)
     {
         return ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MCNetworking.MOD_ID, name));
     }
 
-    private static ResourceKey<Item> keyOfItem(String name)
+    private static @NonNull ResourceKey<Item> keyOfItem(String name)
     {
         return ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MCNetworking.MOD_ID, name));
     }

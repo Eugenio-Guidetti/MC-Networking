@@ -11,7 +11,7 @@ import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4CidrAddress;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
-import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
+import eu.eugenioguidetti.mcnetworking.terminal.command.UndoableTerminalCommand;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 
@@ -19,7 +19,7 @@ import org.jspecify.annotations.NonNull;
  *
  * @author Eugenio Guidetti
  */
-public class IpAddressCommand implements TerminalCommand
+public class IpAddressCommand implements UndoableTerminalCommand
 {
     @Override
     public void execute(@NonNull ConsoleSession session,
@@ -100,5 +100,18 @@ public class IpAddressCommand implements TerminalCommand
     public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.ip.address").getString();
+    }
+
+    @Override
+    public void undo(@NonNull ConsoleSession session, String @NonNull [] args)
+    {
+        if (!(session.getDevice() instanceof AbstractL3NetworkingBlockEntity l3NetEntity))
+        {
+            return;
+        }
+
+        session.getSelectedInterface().setIpAddress(Ipv4CidrAddress.ALL_ZEROS);
+
+        l3NetEntity.sendGratuitousArpRequest(session.getSelectedInterface().getName());
     }
 }

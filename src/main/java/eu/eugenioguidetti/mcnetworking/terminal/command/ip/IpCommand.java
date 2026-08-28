@@ -9,7 +9,7 @@ Data: 10/06/2026
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalMode;
 import eu.eugenioguidetti.mcnetworking.terminal.command.CommandRegistrar;
-import eu.eugenioguidetti.mcnetworking.terminal.command.TerminalCommand;
+import eu.eugenioguidetti.mcnetworking.terminal.command.UndoableTerminalCommand;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 
@@ -19,7 +19,7 @@ import java.util.Arrays;
  *
  * @author Eugenio Guidetti
  */
-public class IpCommand extends CommandRegistrar implements TerminalCommand
+public class IpCommand extends CommandRegistrar implements UndoableTerminalCommand
 {
     public IpCommand()
     {
@@ -52,5 +52,16 @@ public class IpCommand extends CommandRegistrar implements TerminalCommand
     public String getDescription(@NonNull ConsoleSession session)
     {
         return Component.translatable("mcnetworking.cli.command.description.ip").getString();
+    }
+
+    @Override
+    public void undo(@NonNull ConsoleSession session,
+                     String @NonNull [] args) throws IllegalArgumentException, ArrayIndexOutOfBoundsException
+    {
+        String[] newArgs = Arrays.copyOfRange(args, 1, args.length);
+
+        processUndo(session, newArgs);
+
+        session.getDevice().sync();
     }
 }

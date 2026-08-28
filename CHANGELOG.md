@@ -1,12 +1,21 @@
-## Changelog v1.1.1-26.2
+## Changelog v1.1.2-26.2
 
-- Added CLI command autocompletion (`TAB` key)
-- Fixed Gratuitous ARP requests
+* Added CLI command `no` to undo other commands
+
+Commands that can be undone:
+
+* `ip address` (on interfaces)
+* `ip default_gateway` (on hosts)
+* `ip route` (on routers)
 
 ---
 
-## Changelog v1.1.1-26.2
+## Changelog v1.1.2-26.2
 
-- Aggiunto auto completamento comandi CLI (Tasto `TAB`)
-- Fixate Gratuitous ARP requests
+* Aggiunto comando CLI `no` per annullare altri comandi
 
+Comandi che possono essere annullati:
+
+* `ip address` (sulle interfacce)
+* `ip default_gateway` (sugli host)
+* `ip route` (sui router)

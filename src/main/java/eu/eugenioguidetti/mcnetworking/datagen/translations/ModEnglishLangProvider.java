@@ -70,6 +70,7 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.unknown_command_format", "Unknown command: %s\n");
         translationBuilder.add("mcnetworking.cli.ambiguous_command_format", "Ambiguous command: %s\n");
         translationBuilder.add("mcnetworking.cli.incomplete_command_format", "Incomplete command: %s\n");
+        translationBuilder.add("mcnetworking.cli.cannot_undo_command_format", "Command cannot be undone: %s\n");
 
         translationBuilder.add("mcnetworking.cli.error_format", "§4Error: %s\n");
         translationBuilder.add("mcnetworking.cli.missing_argument_error_format", "Missing argument: %s");
@@ -110,9 +111,11 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.command.network_already_connected",
                                "Another interface already has an address in this network");
 
-        translationBuilder.add("mcnetworking.cli.command.invalid_dest_network", "Invalid destination network address");
-        translationBuilder.add("mcnetworking.cli.command.invalid_next_hop", "Invalid next hop address");
-        translationBuilder.add("mcnetworking.cli.command.invalid_next_hop_this_router", "Invalid next hop address (it's this router)");
+        translationBuilder.add("mcnetworking.cli.command.ip.route.invalid_dest_network", "Invalid destination network address");
+        translationBuilder.add("mcnetworking.cli.command.ip.route.invalid_next_hop", "Invalid next hop address");
+        translationBuilder.add("mcnetworking.cli.command.ip.route.invalid_next_hop_this_router",
+                               "Invalid next hop address (it's this router)");
+        translationBuilder.add("mcnetworking.cli.command.ip.route.cannot_remove_route_format", "Route %s cannot be removed");
 
         translationBuilder.add("mcnetworking.cli.command.show.mac.output_format", " MAC: %s\n");
         translationBuilder.add("mcnetworking.cli.command.show.ip.output_format", " IP: %s\n");
@@ -138,6 +141,7 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
 
         translationBuilder.add("mcnetworking.cli.command.description.help",
                                "help Shows available commands\nhelp <command> Shows how to use the specified command\n");
+        translationBuilder.add("mcnetworking.cli.command.description.no", "no <command> undoes the specified command\n");
         translationBuilder.add("mcnetworking.cli.command.description.clear", "clear Clears the terminal\n");
         translationBuilder.add("mcnetworking.cli.command.description.configure_format", "configure Goes to the %s configuration mode\n");
         translationBuilder.add("mcnetworking.cli.command.description.enable_format", "enable Goes to the %s configuration mode\n");
@@ -148,7 +152,7 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
                                "interface <interface_name | interface_direction> Goes to the %s configuration mode for the specified interface\n");
 
         translationBuilder.add("mcnetworking.cli.command.description.ip",
-                               "IP configuration\nip help Shows the available ip configurations\nip help <configuration> Shows how to use the specified configuration\n");
+                               "IP configuration\nhelp ip <configuration> Shows how to use the specified configuration\n");
         translationBuilder.add("mcnetworking.cli.command.description.ip.address",
                                "ip address <address> Assigns an IP address to the interface\n");
         translationBuilder.add("mcnetworking.cli.command.description.ip.default_gateway",
@@ -160,7 +164,7 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
                                "ping <dest_ip> [resends] Sends ICMP echo requests to the specified ip address\n");
 
         translationBuilder.add("mcnetworking.cli.command.description.show",
-                               "Information about the device\nshow help Shows the available options\nshow help <option> Shows which information the specified option contains\n");
+                               "Information about the device\nhelp show <option> Shows which information the specified option contains\n");
         translationBuilder.add("mcnetworking.cli.command.description.show.mac",
                                "show mac Shows the MAC address of the selected interface\n");
         translationBuilder.add("mcnetworking.cli.command.description.show.ip", "show ip Shows the IP address of the selected interface\n");
