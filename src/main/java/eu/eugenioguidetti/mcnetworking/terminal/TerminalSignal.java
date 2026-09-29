@@ -12,5 +12,6 @@ Data: 20/08/2026
  */
 public enum TerminalSignal
 {
-    SIGINT
+    SIGINT,
+    SIGTERM,
 }

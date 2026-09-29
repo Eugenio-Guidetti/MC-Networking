@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "mc-networking:copper_crossover_cable"
+        "recipes": "mc-networking:copper_crossover_cable"
       },
       "trigger": "minecraft:recipe_unlocked"
     }

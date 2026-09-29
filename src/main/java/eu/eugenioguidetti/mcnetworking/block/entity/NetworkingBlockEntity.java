@@ -17,7 +17,6 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
-import eu.eugenioguidetti.mcnetworking.terminal.gui.ClientCommandHistoryCache;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -38,10 +37,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static eu.eugenioguidetti.mcnetworking.GlobalConstants.LOOPBACK_NAME;
 import static eu.eugenioguidetti.mcnetworking.GlobalConstants.MAX_JOBS;
@@ -216,7 +212,7 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     }
 
 
-    public int allocateJobId()
+    private int allocateJobId()
     {
         int assignedId = nextJobId;
         nextJobId++;
@@ -229,13 +225,24 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
         return assignedId;
     }
 
-    public void startJob(@NonNull Job job)
+    public int startJob(@NonNull Job job, boolean foreground)
     {
+        if (job.isRunning())
+        {
+            throw new IllegalStateException("Job già avviato");
+        }
+
         int jobId = allocateJobId();
         this.activeJobs.put(jobId, job);
-        foregroundJobId = jobId;
+
+        if (foreground)
+        {
+            foregroundJobId = jobId;
+        }
 
         job.setId(jobId);
+
+        return jobId;
     }
 
     public Optional<Job> getJob(int jobId)
@@ -243,9 +250,16 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
         if (jobId < 1 || jobId > MAX_JOBS)
         {
             MCNetworking.LOGGER.error("Ricevuto jobId invalido: {}", jobId);
+
+            return Optional.empty();
         }
 
         return Optional.ofNullable(activeJobs.get(jobId));
+    }
+
+    public List<Job> getRunningJobs()
+    {
+        return activeJobs.values().stream().toList();
     }
 
     public Optional<Job> getLastJob()
@@ -293,10 +307,17 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
                 continue;
             }
 
+            BlockEntity blockEntity = entity.getLevel().getBlockEntity(nic.getPhysicalConnectionData().connectedTargetPos());
+
+            // Blocco di destinazione in un chunk non caricato.
+            // Quando il suo chunk sarà caricato, sarà lui a cercare di aggiungere in cavo tra lui e questo blocco
+            if (blockEntity == null)
+            {
+                return;
+            }
+
             // Evita di mostrare "connessioni fantasma"
-            if (!(entity
-                    .getLevel()
-                    .getBlockEntity(nic.getPhysicalConnectionData().connectedTargetPos()) instanceof NetworkReceiver receiver))
+            if (!(blockEntity instanceof NetworkReceiver receiver))
             {
                 nic.disconnect();
 
@@ -433,17 +454,7 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     @Override
     public void setRemoved()
     {
-        if (this.level != null)
-        {
-            if (this.level.isClientSide())
-            {
-                CablesRenderPipeline.removeCablesFromBlock(GlobalPos.of(this.level.dimension(), this.getBlockPos()));
-            }
-            else
-            {
-                activeJobs.clear();
-            }
-        }
+        cleanup();
 
         super.setRemoved();
     }
@@ -452,29 +463,40 @@ public abstract class NetworkingBlockEntity extends BlockEntity implements Netwo
     @Override
     public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state)
     {
-        activeJobs.clear();
+        cleanup();
 
+        if (this.level != null)
+        {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+
+            if (blockEntity instanceof NetworkingBlockEntity netEntity)
+            {
+                // Scollega i cavi
+                netEntity.disconnectAllPhysical();
+            }
+        }
+
+        super.preRemoveSideEffects(pos, state);
+    }
+
+
+    private void cleanup()
+    {
         if (this.level == null)
         {
             return;
         }
 
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-
-        if (blockEntity instanceof NetworkingBlockEntity netEntity)
+        if (this.level.isClientSide())
         {
-            netEntity.disconnectAllPhysical();
-            TerminalCache.removeBlock(level, pos);
-
-            if (level.isClientSide())
-            {
-                CablesRenderPipeline.removeCablesFromBlock(GlobalPos.of(this.level.dimension(), pos));
-            }
-
-            ClientCommandHistoryCache.clearCache(GlobalPos.of(this.level.dimension(), pos));
+            CablesRenderPipeline.removeCablesFromBlock(GlobalPos.of(this.level.dimension(), this.getBlockPos()));
         }
-
-        super.preRemoveSideEffects(pos, state);
+        else
+        {
+            foregroundJobId = -1;
+            activeJobs.clear();
+            TerminalCache.removeBlock(this.level, this.worldPosition);
+        }
     }
 
     @Override

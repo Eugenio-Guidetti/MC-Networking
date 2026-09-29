@@ -6,6 +6,7 @@ Cognome: Guidetti
 Data: 26/05/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.GlobalConstants;
 import eu.eugenioguidetti.mcnetworking.Utils;
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4CidrAddress;
@@ -37,6 +38,7 @@ import static eu.eugenioguidetti.mcnetworking.GlobalConstants.LOOPBACK_NAME;
  * @author Eugenio Guidetti
  */
 
+
 public class NetworkInterface
 {
     /**
@@ -44,8 +46,34 @@ public class NetworkInterface
      * @param connectedTargetName il nome dell'interfaccia connessa (es. 'eth0')
      */
     public record PhysicalConnectionData(@NonNull BlockPos connectedTargetPos, @NonNull String connectedTargetName,
-                                         @NonNull Direction connectedTargetFace, @NonNull CableType connectedCableType)
+                                         @NonNull Direction connectedTargetFace, @NonNull CableType connectedCableType, double cableLength)
     {
+        public PhysicalConnectionData(BlockPos connectedTargetPos,
+                                      String connectedTargetName,
+                                      Direction connectedTargetFace,
+                                      CableType connectedCableType,
+                                      double cableLength)
+        {
+            if (connectedTargetPos == null || connectedTargetName == null || connectedTargetFace == null || connectedCableType == null)
+            {
+                throw new IllegalArgumentException("Parametro null");
+            }
+
+            if (cableLength <= 0)
+            {
+                throw new IllegalArgumentException("CableLength negativo");
+            }
+            if (cableLength * cableLength > GlobalConstants.CABLES_MAX_LENGTH_SQUARED)
+            {
+                throw new IllegalArgumentException("Dispositivi troppo lontani");
+            }
+
+            this.connectedTargetPos = connectedTargetPos;
+            this.connectedTargetName = connectedTargetName;
+            this.connectedTargetFace = connectedTargetFace;
+            this.connectedCableType = connectedCableType;
+            this.cableLength = cableLength;
+        }
     }
 
 
@@ -131,7 +159,9 @@ public class NetworkInterface
             currentTxFrame = txQueue.poll();
 
             // Calcolo ritardo
-            currentTxTicksRemaining = physicalConnectionData.connectedCableType.ticksDelay() + (int) (currentTxFrame.getSizeInBytes() * 20 / this.txSpeed);
+            currentTxTicksRemaining = (int) (physicalConnectionData.cableLength() / physicalConnectionData
+                    .connectedCableType()
+                    .cableSpeed() + (currentTxFrame.getSizeInBytes() * 20 / this.txSpeed));
         }
 
         // Eseguo ritardo
@@ -139,7 +169,7 @@ public class NetworkInterface
         {
             currentTxTicksRemaining--;
 
-            if (currentTxTicksRemaining % 7 == 0)
+            if (currentTxTicksRemaining % 5 == 0)
             {
                 showParticles((ServerLevel) level);
             }
@@ -148,11 +178,12 @@ public class NetworkInterface
         }
 
         // Ritardo esaurito
-        BlockEntity target = level.getBlockEntity(this.physicalConnectionData.connectedTargetPos);
+        BlockEntity target = level.getBlockEntity(this.physicalConnectionData.connectedTargetPos());
         if (target instanceof NetworkingBlockEntity netEntity)
         {
             // Il pacchetto entra nel blocco alle coordinate dell'interfaccia di destinazione, specifico da quale faccia arriva
-            netEntity.getStack().receiveFrame(currentTxFrame, this.physicalConnectionData.connectedTargetName);
+            showParticles((ServerLevel) level);
+            netEntity.getStack().receiveFrame(currentTxFrame, this.physicalConnectionData.connectedTargetName());
         }
 
         currentTxFrame = null;
@@ -191,12 +222,13 @@ public class NetworkInterface
 
         if (connected)
         {
-            output.putInt("TargetX", physicalConnectionData.connectedTargetPos.getX());
-            output.putInt("TargetY", physicalConnectionData.connectedTargetPos.getY());
-            output.putInt("TargetZ", physicalConnectionData.connectedTargetPos.getZ());
-            output.putString("TargetName", physicalConnectionData.connectedTargetName);
-            output.putString("TargetFace", physicalConnectionData.connectedTargetFace.getName());
-            output.putString("CableType", physicalConnectionData.connectedCableType.name());
+            output.putInt("TargetX", physicalConnectionData.connectedTargetPos().getX());
+            output.putInt("TargetY", physicalConnectionData.connectedTargetPos().getY());
+            output.putInt("TargetZ", physicalConnectionData.connectedTargetPos().getZ());
+            output.putString("TargetName", physicalConnectionData.connectedTargetName());
+            output.putString("TargetFace", physicalConnectionData.connectedTargetFace().getName());
+            output.putString("CableType", physicalConnectionData.connectedCableType().name());
+            output.putDouble("CableLength", physicalConnectionData.cableLength());
         }
 
         if (ipAddress != null && !ipAddress.equals(Ipv4CidrAddress.ALL_ZEROS))
@@ -238,8 +270,13 @@ public class NetworkInterface
                 Direction connectedTargetFace = Direction.byName(connectedTargetFaceName.toLowerCase());
 
                 CableType connectedCableType = CableType.fromName(input.getString("CableType").orElseThrow());
+                double cableLength = input.getDoubleOr("CableLength", -1);
 
-                connect(connectedTargetPos, connectedTargetName, connectedTargetFace, connectedCableType);
+                connect(new PhysicalConnectionData(connectedTargetPos,
+                                                   connectedTargetName,
+                                                   connectedTargetFace,
+                                                   connectedCableType,
+                                                   cableLength));
             }
             catch (Exception e)
             {
@@ -259,7 +296,7 @@ public class NetworkInterface
         return this.name.equals(LOOPBACK_NAME);
     }
 
-    public void connect(BlockPos targetPos, String targetName, Direction connectedTargetFace, CableType cableType)
+    public void connect(PhysicalConnectionData connectionData)
     {
         if (isLoopback())
         {
@@ -268,14 +305,9 @@ public class NetworkInterface
             throw new IllegalStateException("Non puoi connettere fisicamente un'interfaccia di loopback");
         }
 
-        if (targetPos == null || targetName == null || connectedTargetFace == null || cableType == null)
-        {
-            disconnect();
-
-            throw new IllegalArgumentException("Parametro null");
-        }
-
-        this.physicalConnectionData = new PhysicalConnectionData(targetPos, targetName, connectedTargetFace, cableType);
+        this.physicalConnectionData = connectionData;
+        //BlockPos targetPos, String targetName, Direction connectedTargetFace, CableType cableType, int cableLength
+        //new PhysicalConnectionData(targetPos, targetName, connectedTargetFace, cableType, cableLength);
     }
 
     public void disconnect()

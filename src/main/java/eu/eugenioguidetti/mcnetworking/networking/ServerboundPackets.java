@@ -82,12 +82,12 @@ public class ServerboundPackets
             session.sendOutput(session.getPrompt());
         }
 
-        String text = switch (signal)
+        switch (signal)
         {
-            case SIGINT -> "^C\n";
-        };
-
-        session.sendOutput(text);
+            case SIGINT:
+                session.sendOutput("^C");
+                break;
+        }
     }
 
     public static void handleCommandCompletionC2SPayload(@NonNull CommandCompletionC2SPayload payload,

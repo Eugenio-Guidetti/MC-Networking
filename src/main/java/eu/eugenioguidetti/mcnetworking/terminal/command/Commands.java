@@ -6,6 +6,8 @@ Cognome: Guidetti
 Data: 07/06/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.terminal.command.daemons.JobCommand;
+import eu.eugenioguidetti.mcnetworking.terminal.command.daemons.arpd.ArpdCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.globalConfig.HostnameCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.interfaceConfig.InterfaceCommand;
 import eu.eugenioguidetti.mcnetworking.terminal.command.ip.IpCommand;
@@ -22,6 +24,9 @@ public class Commands extends CommandRegistrar
     public Commands()
     {
         super();
+
+        commands.put("job", new JobCommand());
+        commands.put("arpd", new ArpdCommand());
 
         commands.put("clear", new ClearCommand());
         commands.put("configure", new ConfigureTerminalCommand());

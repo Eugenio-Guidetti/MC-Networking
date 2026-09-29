@@ -94,6 +94,7 @@ public abstract class NetworkingBlock extends BaseEntityBlock
         return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
     }
 
+    // Apertura UI terminale
     @Override
     protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state,
                                                         @NonNull Level level,

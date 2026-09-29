@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "mc-networking:fiber_optic_cable"
+        "recipes": "mc-networking:fiber_optic_cable"
       },
       "trigger": "minecraft:recipe_unlocked"
     }

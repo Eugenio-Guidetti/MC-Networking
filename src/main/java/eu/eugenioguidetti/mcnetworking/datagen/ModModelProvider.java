@@ -32,9 +32,9 @@ public class ModModelProvider extends FabricModelProvider
     {
         blockModelGenerators.createHorizontallyRotatedBlock(ModBlocks.HOST_BLOCK, TexturedModel.ORIENTABLE);
 
-        blockModelGenerators.createTrivialBlock(ModBlocks.HUB_BLOCK, TexturedModel.CUBE_TOP_BOTTOM);
-        blockModelGenerators.createTrivialBlock(ModBlocks.SWITCH_BLOCK, TexturedModel.CUBE_TOP_BOTTOM);
-        blockModelGenerators.createTrivialBlock(ModBlocks.ROUTER_BLOCK, TexturedModel.CUBE_TOP_BOTTOM);
+        blockModelGenerators.createTrivialBlock(ModBlocks.HUB_BLOCK, TexturedModel.CUBE_BOTTOM_TOP);
+        blockModelGenerators.createTrivialBlock(ModBlocks.SWITCH_BLOCK, TexturedModel.CUBE_BOTTOM_TOP);
+        blockModelGenerators.createTrivialBlock(ModBlocks.ROUTER_BLOCK, TexturedModel.CUBE_BOTTOM_TOP);
     }
 
     @Override

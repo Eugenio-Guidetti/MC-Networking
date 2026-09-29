@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,12 +40,7 @@ public class TerminalCache
         ServerLevel level = (ServerLevel) entity.getLevel();
         BlockPos pos = entity.getBlockPos();
 
-        return getOrCreateSession(level, pos);
-    }
-
-    public static CacheValue getOrCreateSession(@NotNull ServerLevel level, BlockPos pos)
-    {
-        if (level.isClientSide())
+        if (level == null || level.isClientSide())
         {
             throw new IllegalStateException("Il Client sta cercando di accedere alla cache del Server");
         }
@@ -54,42 +50,45 @@ public class TerminalCache
 
         return CACHES.computeIfAbsent(key, k ->
         {
-            BlockEntity blockEntity = level.getBlockEntity(pos);
-
             // Inizializza una nuova sessione se non esiste
-            if ((blockEntity instanceof NetworkingBlockEntity device))
+            List<String> initialHistory = new ArrayList<>();
+            initialHistory.add("");
+
+            String welcomeMsg = Component.translatable("mcnetworking.cli.welcome_message").getString();
+
+            for (int i = 0; i < welcomeMsg.length(); i++)
             {
-                List<String> initialHistory = new ArrayList<>();
-                initialHistory.add("");
+                char c = welcomeMsg.charAt(i);
 
-                String welcomeMsg = Component.translatable("mcnetworking.cli.welcome_message").getString();
-
-                for (int i = 0; i < welcomeMsg.length(); i++)
+                if (c == '\n')
                 {
-                    char c = welcomeMsg.charAt(i);
-
-                    if (c == '\n')
-                    {
-                        initialHistory.add("");
-                    }
-                    else if (c == '\r')
-                    {
-                        initialHistory.set(initialHistory.size() - 1, "");
-                    }
-                    else
-                    {
-                        String currentLine = initialHistory.getLast();
-                        initialHistory.set(initialHistory.size() - 1, currentLine + c);
-                    }
+                    initialHistory.add("");
                 }
+                else if (c == '\r')
+                {
+                    initialHistory.set(initialHistory.size() - 1, "");
+                }
+                else
+                {
+                    String currentLine = initialHistory.getLast();
+                    initialHistory.set(initialHistory.size() - 1, currentLine + c);
+                }
+            }
 
-                return new CacheValue(initialHistory, new ConsoleSession(pos, level, device));
-            }
-            else
-            {
-                throw new IllegalStateException("Il blocco in posizione " + pos + " non è una NetworkingBlockEntity");
-            }
+            return new CacheValue(initialHistory, new ConsoleSession(pos, level, entity));
         });
+    }
+
+    public static CacheValue getOrCreateSession(@NonNull ServerLevel level, BlockPos pos)
+    {
+        BlockEntity entity = level.getBlockEntity(pos);
+
+        if ((!(entity instanceof NetworkingBlockEntity device)))
+        {
+            throw new IllegalStateException("Il blocco in posizione " + pos + " non è una NetworkingBlockEntity");
+        }
+
+        return getOrCreateSession(device);
     }
 
     public static void renderOutput(ServerLevel level, BlockPos pos, String text)

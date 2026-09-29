@@ -21,7 +21,7 @@ import static eu.eugenioguidetti.mcnetworking.GlobalConstants.DEFAULT_TTL;
  */
 public class PingJob extends Job
 {
-    private static final int PING_INTERVAL_TICKS = 20 * 5; // 20 ticks = 1 secondo
+    private static final int PING_INTERVAL_TICKS = 5 * 20; // 20 ticks = 1 secondo
     private int timerTicks;
     private int remainingResends;
 
@@ -182,7 +182,16 @@ public class PingJob extends Job
             String mediaFormattata = String.format(java.util.Locale.ROOT,
                                                    "%.2f",
                                                    receivedPackets > 0 ? (double) totWaitingTicks / receivedPackets : 0d);
-            String percFormattata = String.format(java.util.Locale.ROOT, "%.2f", lostPackets * 100d / sentPackets);
+
+            String pacchettiPersi = "";
+
+            if (lostPackets >= 0)
+            {
+                String percFormattata = String.format(java.util.Locale.ROOT, "%.2f", lostPackets * 100d / sentPackets);
+                pacchettiPersi = String.format(Component.translatable("mcnetworking.cli.command.ping.stats_lost_format").getString(),
+                                               lostPackets,
+                                               percFormattata);
+            }
 
             return String.format(Component.translatable("mcnetworking.cli.command.ping.stats_format").getString(),
                                  destIp,
@@ -190,8 +199,7 @@ public class PingJob extends Job
                                  sentPackets,
                                  totResends,
                                  receivedPackets,
-                                 lostPackets,
-                                 percFormattata);
+                                 pacchettiPersi);
         }
     }
 }

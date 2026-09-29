@@ -10,6 +10,8 @@ import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.terminal.ConsoleSession;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalSignal;
+import net.minecraft.server.level.ServerLevel;
+import org.jspecify.annotations.NonNull;
 
 import static eu.eugenioguidetti.mcnetworking.GlobalConstants.MAX_JOBS;
 
@@ -19,41 +21,49 @@ import static eu.eugenioguidetti.mcnetworking.GlobalConstants.MAX_JOBS;
  */
 public abstract class Job
 {
-    protected boolean forceTerminate = false;
-
+    protected volatile TerminalSignal receivedSignal = null;
     protected int jobId = -1;
+    private volatile boolean running = false;
 
     protected final NetworkingBlockEntity netEntity;
-    protected final ConsoleSession session;
+    protected ConsoleSession session;
 
     protected Job(NetworkingBlockEntity netEntity)
     {
         this.netEntity = netEntity;
-        this.session = TerminalCache.getOrCreateSession(netEntity).session();
     }
 
     /**
-     * @return true se il job è completato
+     * @return true se il job è completato o terminato
      */
     public final boolean tick()
     {
-        if (forceTerminate || (jobId != -1 && internalTick()))
+        if (receivedSignal == TerminalSignal.SIGINT || receivedSignal == TerminalSignal.SIGTERM)
         {
-            onTerminate();
+            terminate();
+            return true;
+        }
+
+        if (running && internalTick())
+        {
+            terminate();
             return true;
         }
 
         return false;
     }
 
+    private void terminate()
+    {
+        running = false;
+        onTerminate();
+    }
+
     protected abstract boolean internalTick();
 
-    public void handleSignal(TerminalSignal signal)
+    public void handleSignal(@NonNull TerminalSignal signal)
     {
-        if (signal == TerminalSignal.SIGINT)
-        {
-            this.forceTerminate = true;
-        }
+        this.receivedSignal = signal;
     }
 
     protected void onStart()
@@ -75,8 +85,35 @@ public abstract class Job
             throw new IllegalStateException("jobId già assegnato");
         }
 
+        this.running = true;
         this.jobId = jobId;
 
+        if (this.netEntity.getLevel() instanceof ServerLevel)
+        {
+            this.session = TerminalCache.getOrCreateSession(this.netEntity).session();
+        }
+
         onStart();
+    }
+
+    public int getJobId()
+    {
+        return jobId;
+    }
+
+    public boolean isRunning()
+    {
+        return running;
+    }
+
+    public TerminalSignal getReceivedSignal()
+    {
+        return receivedSignal;
+    }
+
+    @Override
+    public String toString()
+    {
+        return this.getClass().getSimpleName() + ": " + "running=" + running + ", jobId=" + jobId + "\n";
     }
 }

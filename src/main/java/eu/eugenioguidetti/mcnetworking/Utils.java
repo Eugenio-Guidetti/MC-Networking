@@ -33,9 +33,9 @@ public abstract class Utils
         double centerY = pos.getY() + 0.5;
         double centerZ = pos.getZ() + 0.5;
 
-        double edgeX = centerX + (face.getStepX() * 0.5);
-        double edgeY = centerY + (face.getStepY() * 0.5);
-        double edgeZ = centerZ + (face.getStepZ() * 0.5);
+        double edgeX = centerX + (face.getStepX() * 0.505); // Evita z fighting
+        double edgeY = centerY + (face.getStepY() * 0.505);
+        double edgeZ = centerZ + (face.getStepZ() * 0.505);
 
         return new Vec3(edgeX, edgeY, edgeZ);
     }
@@ -92,5 +92,16 @@ public abstract class Utils
 
         sb.append("\n");
         return sb.toString();
+    }
+
+    public static int calcDistanceSquared(@NonNull BlockPos posA, @NonNull BlockPos posB)
+    {
+        int dist = 0;
+
+        dist += (int) Math.pow(posA.getX() - posB.getX(), 2);
+        dist += (int) Math.pow(posA.getY() - posB.getY(), 2);
+        dist += (int) Math.pow(posA.getZ() - posB.getZ(), 2);
+
+        return dist;
     }
 }

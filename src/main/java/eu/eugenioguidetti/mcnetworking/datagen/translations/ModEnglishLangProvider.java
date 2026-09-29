@@ -39,11 +39,15 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add(ModItems.SCISSORS, "Scissors");
 
         translationBuilder.add("mcnetworking.cable.cancelled", "Link cancelled");
+        translationBuilder.add("mcnetworking.cable.cancelled.already_connected", "Link cancelled: One interface is already connected");
+        translationBuilder.add("mcnetworking.cable.cancelled.too_far", "Link cancelled: Devices too far");
+        translationBuilder.add("mcnetworking.cable.cancelled.obstructed", "Cannot link: Something obstructs the link");
+        translationBuilder.add("mcnetworking.cable.connection_invalid",
+                               "Invalid connection: incorrect cable type. (Hint: like devices require Crossover, unlike devices require Straight-through)");
         translationBuilder.add("mcnetworking.cable.no_interfaces_on_this_side", "No interface on this side");
         translationBuilder.add("mcnetworking.cable.wrong_connector", "Wrong connector");
         translationBuilder.add("mcnetworking.cable.interface_already_connected", "This interface is already connected");
         translationBuilder.add("mcnetworking.cable.link_started_format", "Link %s started from %s");
-        translationBuilder.add("mcnetworking.cable.cancelled_already_connected", "Link cancelled. One interface is already connected");
         translationBuilder.add("mcnetworking.cable.link_ended_format", "Devices linked with %s");
 
         // --- Item tooltips ---
@@ -83,7 +87,7 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
 
         translationBuilder.add("mcnetworking.cli.no_route_found_format", "No route found for: %s\n");
 
-        translationBuilder.add("mcnetworking.cli.arp_request_timeout_format", "ARP request timed out. Packets to %s have been dropped\n");
+        translationBuilder.add("mcnetworking.cli.arp_request_timeout_format", "ARP request timed out. Packets to %s have been dropped");
 
         translationBuilder.add("mcnetworking.cli.command.available_commands", "Available commands: ");
         translationBuilder.add("mcnetworking.cli.command.no_available_commands_format", "No available commands with: %s\n");
@@ -101,7 +105,8 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.command.ping.reply_format", " Reply from %s: duration: %s ticks TTL: %s\n");
         translationBuilder.add("mcnetworking.cli.command.ping.timeout", " Request timed out\n");
         translationBuilder.add("mcnetworking.cli.command.ping.stats_format",
-                               "\nPing stats for %s:\n Avg wait: %s ticks. Packets sent: %s of %s. Received: %s. Lost: %s (%s%%)\n\n");
+                               "\nPing stats for %s:\n Avg wait: %s ticks. Packets sent: %s of %s. Received: %s.%s\n\n");
+        translationBuilder.add("mcnetworking.cli.command.ping.stats_lost_format", " Lost: %s (%s%%)");
 
         translationBuilder.add("mcnetworking.cli.command.traceroute.title_format", "\nTracing route to %s with a maximum of %s hops\n\n");
         translationBuilder.add("mcnetworking.cli.command.traceroute.timeout", "Request timed out\n");
@@ -122,8 +127,10 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.command.show.pos.output_format", "Dimension: %s; Position: %s\n");
 
         translationBuilder.add("mcnetworking.cli.command.show.arp_cache.empty", "ARP cache is empty\n");
-        translationBuilder.add("mcnetworking.cli.command.show.arp_cache.output_format", "ARP cache:\n%s");
-        translationBuilder.add("mcnetworking.cli.command.show.arp_cache.row_format", " %s -> %s\n");
+        translationBuilder.add("mcnetworking.cli.command.show.arp_cache.output_format",
+                               "ARP cache:\n IP Address\t\tMAC Address\t\t\tTTL (gt)\n%s");
+        translationBuilder.add("mcnetworking.cli.command.show.arp_cache.row_format", " %s\t\t%s\t\t%s\n");
+        translationBuilder.add("mcnetworking.cli.command.show.arp_cache.static", "static");
 
         translationBuilder.add("mcnetworking.cli.command.show.switching_table.empty", "Switching table is empty\n");
         translationBuilder.add("mcnetworking.cli.command.show.switching_table.output_format", "Switching table:\n%s");
@@ -139,6 +146,12 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.command.show.interfaces.not_connected", "(not connected)\n");
         translationBuilder.add("mcnetworking.cli.command.show.interfaces.loopback", "(loopback)\n");
 
+        translationBuilder.add("mcnetworking.cli.command.show.jobs.output", "Running jobs:\n");
+
+        translationBuilder.add("mcnetworking.cli.command.jobs.not_found_format", "Job %s not found");
+        translationBuilder.add("mcnetworking.cli.command.jobs.daemon_not_running_format", "Daemon %s not running");
+        translationBuilder.add("mcnetworking.cli.command.jobs.already_running_format", "Job %s is already running");
+
         translationBuilder.add("mcnetworking.cli.command.description.help",
                                "help Shows available commands\nhelp <command> Shows how to use the specified command\n");
         translationBuilder.add("mcnetworking.cli.command.description.no", "no <command> undoes the specified command\n");
@@ -150,6 +163,17 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.command.description.hostname", "hostname <hostname> Sets the device's hostname\n");
         translationBuilder.add("mcnetworking.cli.command.description.interface_format",
                                "interface <interface_name | interface_direction> Goes to the %s configuration mode for the specified interface\n");
+
+        translationBuilder.add("mcnetworking.cli.command.description.job",
+                               "Jobs configuration\nhelp job <option> Shows how to use the specified option\n");
+        translationBuilder.add("mcnetworking.cli.command.description.job.status", "jobs status Shows the status of the specified job\n");
+        translationBuilder.add("mcnetworking.cli.command.description.job.stop", "jobs stop Stops the specified job\n");
+
+        translationBuilder.add("mcnetworking.cli.command.description.arpd",
+                               "ARP daemon configuration\nhelp arpd <option> Shows how to use the specified option\n");
+        translationBuilder.add("mcnetworking.cli.command.description.arpd.flush", "arpd flush Flushes the ARP cache\n");
+        translationBuilder.add("mcnetworking.cli.command.description.arpd.start",
+                               "arpd start Starts a new ARP daemon if none are running\n");
 
         translationBuilder.add("mcnetworking.cli.command.description.ip",
                                "IP configuration\nhelp ip <configuration> Shows how to use the specified configuration\n");
@@ -176,6 +200,7 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add("mcnetworking.cli.command.description.show.routing_table",
                                "show routing_table Shows the device's routing table\n");
         translationBuilder.add("mcnetworking.cli.command.description.show.interfaces", "show interfaces Shows the device's interfaces\n");
+        translationBuilder.add("mcnetworking.cli.command.description.show.jobs", "show jobs Shows the running jobs\n");
 
         translationBuilder.add("mcnetworking.cli.command.description.traceroute",
                                "traceroute <dest_ip> [resends_per_hop] Traces the route to reach the specified ip address\n");
