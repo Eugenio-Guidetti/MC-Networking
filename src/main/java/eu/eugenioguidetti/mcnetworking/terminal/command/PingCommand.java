@@ -45,7 +45,7 @@ public class PingCommand implements TerminalCommand
             resends = 4;
         }
 
-        l3NetEntity.startJob(new PingJob(destIp, resends, l3NetEntity));
+        l3NetEntity.startJob(new PingJob(destIp, resends, l3NetEntity), true);
     }
 
     @Override

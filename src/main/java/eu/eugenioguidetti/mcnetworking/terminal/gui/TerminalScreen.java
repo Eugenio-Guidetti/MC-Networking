@@ -6,6 +6,7 @@ Cognome: Guidetti
 Data: 07/06/2026
  */
 
+import com.mojang.blaze3d.platform.InputConstants;
 import eu.eugenioguidetti.mcnetworking.networking.packet.*;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalSignal;
@@ -19,7 +20,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.NonNull;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -163,12 +163,12 @@ public class TerminalScreen extends Screen
             {
                 int modifiers = event.modifiers();
                 // Tolgo lo shift premuto
-                modifiers &= ~1;
-                KeyEvent event1 = new KeyEvent(event.key(), event.scancode(), modifiers);
+                modifiers &= ~InputConstants.MOD_SHIFT;
+                KeyEvent event1 = new KeyEvent(event.key(), event.keycode(), modifiers);
                 return super.keyPressed(event1);
             }
 
-            if (event.key() == GLFW.GLFW_KEY_C)
+            if (event.key() == InputConstants.KEY_C)
             {
                 if (!this.inputField.getValue().isEmpty())
                 {
@@ -180,7 +180,7 @@ public class TerminalScreen extends Screen
                 }
             }
 
-            else if (event.key() == GLFW.GLFW_KEY_D)
+            else if (event.key() == InputConstants.KEY_D)
             {
                 // "Svuota buffer"
                 if (!this.inputField.getValue().isEmpty())
@@ -193,17 +193,15 @@ public class TerminalScreen extends Screen
                 }
             }
 
-            else if (event.key() == GLFW.GLFW_KEY_L)
+            else if (event.key() == InputConstants.KEY_L)
             {
                 inviaComando("clear", false);
             }
-
-            return true;
         }
 
         if (showPrompt)
         {
-            if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER)
+            if (event.key() == InputConstants.KEY_RETURN || event.key() == InputConstants.KEY_NUMPADENTER)
             {
                 inviaComando(this.inputField.getValue().trim(), true);
 
@@ -211,7 +209,7 @@ public class TerminalScreen extends Screen
             }
 
             // Scorri indietro
-            if (event.key() == GLFW.GLFW_KEY_UP)
+            if (event.key() == InputConstants.KEY_UP)
             {
                 if (ClientCommandHistoryCache.getCommand(pos, historyIndex - 1).isEmpty())
                 {
@@ -235,7 +233,7 @@ public class TerminalScreen extends Screen
             }
 
             // Scorri avanti
-            if (event.key() == GLFW.GLFW_KEY_DOWN)
+            if (event.key() == InputConstants.KEY_DOWN)
             {
                 if (ClientCommandHistoryCache.getCommand(pos, historyIndex).isEmpty())
                 {
@@ -258,7 +256,7 @@ public class TerminalScreen extends Screen
                 return true;
             }
 
-            if (event.key() == GLFW.GLFW_KEY_TAB)
+            if (event.key() == InputConstants.KEY_TAB)
             {
                 this.inputField.setValue(this.inputField.getValue().stripLeading());
 
@@ -337,7 +335,7 @@ public class TerminalScreen extends Screen
         int maxScroll = Math.max(0, visualLines.size() - maxVisibleLines);
 
         // Se tutto il testo entra nello schermo, non disegniamo la scrollbar
-        if (maxScroll <= 0)
+        if (maxScroll == 0)
         {
             return;
         }

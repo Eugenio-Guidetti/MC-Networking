@@ -8,6 +8,7 @@ Data: 12/06/2026
 
 import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.AbstractL2Engine;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.ArpManager;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ArpPayload;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
@@ -17,6 +18,8 @@ import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ARGB;
 import org.jspecify.annotations.NonNull;
+
+import java.util.Optional;
 
 /**
  *
@@ -48,7 +51,14 @@ public class EndDeviceL2Engine extends AbstractL2Engine
 
         if (frame.payload() instanceof ArpPayload arp)
         {
-            l3NetEntity.getArpManager().handleArp(arp, from);
+            Optional<ArpManager> optionalArpManager = l3NetEntity.getArpManager();
+
+            if (optionalArpManager.isEmpty())
+            {
+                return;
+            }
+
+            optionalArpManager.get().handleArp(arp, from);
             return;
         }
 

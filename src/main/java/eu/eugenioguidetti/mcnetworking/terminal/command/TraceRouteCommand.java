@@ -44,7 +44,7 @@ public class TraceRouteCommand implements TerminalCommand
             resends = 3;
         }
 
-        l3NetEntity.startJob(new TraceRouteJob(destIp, resends, l3NetEntity));
+        l3NetEntity.startJob(new TraceRouteJob(destIp, resends, l3NetEntity), true);
     }
 
     @Override

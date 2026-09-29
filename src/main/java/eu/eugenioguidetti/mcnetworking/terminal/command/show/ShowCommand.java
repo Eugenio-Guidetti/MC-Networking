@@ -33,6 +33,8 @@ public class ShowCommand extends CommandRegistrar implements TerminalCommand
         commands.put("switching_table", new ShowSwitchingTableCommand());
         commands.put("routing_table", new ShowRoutingTableCommand());
         commands.put("interfaces", new ShowInterfacesCommand());
+
+        commands.put("jobs", new ShowJobsCommand());
     }
 
     @Override

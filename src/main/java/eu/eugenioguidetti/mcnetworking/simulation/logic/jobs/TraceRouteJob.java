@@ -23,7 +23,7 @@ public class TraceRouteJob extends Job
 {
     private final int resends;
 
-    private static final int TRACEROUTE_INTERVAL_TICKS = 20 * 5; // 20 ticks = 1 secondo
+    private static final int TRACEROUTE_INTERVAL_TICKS = 5 * 20; // 20 ticks = 1 secondo
     private int timerTicks;
 
     private final Ipv4Address destIp;
@@ -119,7 +119,7 @@ public class TraceRouteJob extends Job
         int waited = TRACEROUTE_INTERVAL_TICKS - timerTicks;
         receivedReplyForSequence = true;
 
-        session.sendOutput(String.format("%02dgt\t\t", waited));
+        session.sendOutput(String.format("%3dgt\t\t", waited));
 
         if ((currentSequence - 1) % resends == 0)
         {

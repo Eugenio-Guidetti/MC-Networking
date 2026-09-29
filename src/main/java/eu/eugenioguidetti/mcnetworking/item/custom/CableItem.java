@@ -6,6 +6,8 @@ Cognome: Guidetti
 Data: 26/05/2026
  */
 
+import eu.eugenioguidetti.mcnetworking.GlobalConstants;
+import eu.eugenioguidetti.mcnetworking.Utils;
 import eu.eugenioguidetti.mcnetworking.component.ModDataComponentTypes;
 import eu.eugenioguidetti.mcnetworking.component.PendingConnection;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
@@ -22,8 +24,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jspecify.annotations.NonNull;
 
 import java.util.function.Consumer;
@@ -49,7 +56,7 @@ public class CableItem extends Item
     }
 
     @Override
-    public @NonNull InteractionResult useOn(UseOnContext context)
+    public @NonNull InteractionResult useOn(@NonNull UseOnContext context)
     {
         if (context.getLevel().isClientSide())
         {
@@ -72,8 +79,9 @@ public class CableItem extends Item
 
         if (player.isCrouching() && pending != null)
         {
-            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
             player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled"));
+
+            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
             return InteractionResult.SUCCESS;
         }
 
@@ -107,11 +115,11 @@ public class CableItem extends Item
         {
             // PRIMO CLIC: Inizia la connessione.
             // Salviamo le coordinate dentro l'oggetto (ItemStack)
-            heldItem.set(ModDataComponentTypes.PENDING_CONNECTION, new PendingConnection(clickedPos, clickedFace));
-
             player.sendSystemMessage(Component.literal(String.format(Component
                                                                              .translatable("mcnetworking.cable.link_started_format")
                                                                              .getString(), cableType.name(), clickedPos.toShortString())));
+
+            heldItem.set(ModDataComponentTypes.PENDING_CONNECTION, new PendingConnection(clickedPos, clickedFace));
             return InteractionResult.SUCCESS;
         }
 
@@ -123,10 +131,9 @@ public class CableItem extends Item
         // Cliccato stesso blocco
         if (clickedPos.equals(firstPos))
         {
-            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
-
             player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled"));
 
+            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
             return InteractionResult.SUCCESS;
         }
 
@@ -134,25 +141,59 @@ public class CableItem extends Item
         BlockEntity firstEntity = context.getLevel().getBlockEntity(firstPos);
         if (!(firstEntity instanceof NetworkReceiver firstReceiver))
         {
-            return InteractionResult.PASS;
+            return InteractionResult.FAIL;
         }
 
         NetworkInterface firstNic = firstReceiver.getInterface(firstFace);
 
-        // TODO: aggiungere logica didattica (es. Host-Host richiede Crossover)
-        // if (!isConnectionValid(firstReceiver, receiver, this.cableType)) { ... }
-
         if (firstNic.isConnected() || clickedNic.isConnected())
         {
-            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled.already_connected"));
 
-            player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled_already_connected"));
+            heldItem.remove(ModDataComponentTypes.PENDING_CONNECTION);
+            return InteractionResult.FAIL;
+        }
+
+        if (!isConnectionValid(firstReceiver, receiver, this.cableType))
+        {
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.connection_invalid"));
 
             return InteractionResult.FAIL;
         }
 
-        firstNic.connect(clickedPos, receiver.getInterfaceName(clickedFace), clickedFace, this.cableType);
-        clickedNic.connect(firstPos, firstReceiver.getInterfaceName(firstFace), firstFace, this.cableType);
+        int cableLengthSquared = Utils.calcDistanceSquared(firstPos, clickedPos);
+
+        if (cableLengthSquared > GlobalConstants.CABLES_MAX_LENGTH_SQUARED)
+        {
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled.too_far"));
+
+            return InteractionResult.FAIL;
+        }
+
+        if (!isConnectionPathClear(context.getLevel(), firstPos, firstFace, clickedPos, clickedFace))
+        {
+            player.sendSystemMessage(Component.translatable("mcnetworking.cable.cancelled.obstructed"));
+
+            return InteractionResult.FAIL;
+        }
+
+        double cableLength = Math.sqrt(cableLengthSquared);
+
+        NetworkInterface.PhysicalConnectionData connectionData1 = new NetworkInterface.PhysicalConnectionData(clickedPos,
+                                                                                                              receiver.getInterfaceName(
+                                                                                                                      clickedFace),
+                                                                                                              clickedFace,
+                                                                                                              this.cableType,
+                                                                                                              cableLength);
+        NetworkInterface.PhysicalConnectionData connectionData2 = new NetworkInterface.PhysicalConnectionData(firstPos,
+                                                                                                              firstReceiver.getInterfaceName(
+                                                                                                                      firstFace),
+                                                                                                              firstFace,
+                                                                                                              this.cableType,
+                                                                                                              cableLength);
+
+        firstNic.connect(connectionData1);
+        clickedNic.connect(connectionData2);
 
 
         firstReceiver.sync();
@@ -224,8 +265,65 @@ public class CableItem extends Item
 
     // Effetto "incantato" all'item se c'è una connessione in corso
     @Override
-    public boolean isFoil(ItemStack stack)
+    public boolean isFoil(@NonNull ItemStack stack)
     {
         return stack.has(ModDataComponentTypes.PENDING_CONNECTION) || super.isFoil(stack);
+    }
+
+    /**
+     * Determina se il dispositivo agisce come MDI-X (Switch/Hub).
+     * Router e PC agiscono come MDI standard.
+     */
+    private boolean isMdiX(@NonNull NetworkReceiver device)
+    {
+        return device.getDeviceLayer() <= 2;
+    }
+
+    private boolean isConnectionValid(NetworkReceiver firstReceiver, NetworkReceiver receiver, CableType cableType)
+    {
+        // Se è un cavo in fibra o console, la logica MDI/MDI-X non si applica
+        if (cableType != CableType.COPPER_STRAIGHT && cableType != CableType.COPPER_CROSSOVER)
+        {
+            return true;
+        }
+
+        boolean firstIsMdiX = isMdiX(firstReceiver);
+        boolean secondIsMdiX = isMdiX(receiver);
+
+        // Se i dispositivi sono dello stesso tipo logico (es. PC-PC o Switch-Switch)
+        if (firstIsMdiX == secondIsMdiX)
+        {
+            return cableType == CableType.COPPER_CROSSOVER;
+        }
+        // Se i dispositivi sono di tipo diverso (es. PC-Switch)
+        else
+        {
+            return cableType == CableType.COPPER_STRAIGHT;
+        }
+    }
+
+    private boolean isConnectionPathClear(@NonNull Level level,
+                                          BlockPos firstPos,
+                                          Direction firstFace,
+                                          BlockPos clickedPos,
+                                          Direction clickedFace)
+    {
+        Vec3 start = Utils.getInterfaceCenterPoint(firstPos, firstFace);
+        Vec3 end = Utils.getInterfaceCenterPoint(clickedPos, clickedFace);
+
+        // ignora blocchi "trasparenti" e fluidi
+        ClipContext context = new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (CollisionContext) null);
+
+        BlockHitResult hit = level.clip(context);
+
+        // Se il raggio non colpisce nulla, il percorso è completamente libero
+        if (hit.getType() == HitResult.Type.MISS)
+        {
+            return true;
+        }
+
+        // Se colpisce un blocco, verifichiamo che sia esattamente il blocco di destinazione
+        // (previene falsi negativi dovuti ad approssimazioni matematiche all'arrivo)
+        return hit.getBlockPos().equals(clickedPos);
     }
 }

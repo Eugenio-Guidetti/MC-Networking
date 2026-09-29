@@ -43,3 +43,4 @@ replay_*.log
 *.paint
 iron_block.png
 /src/main/resources/UML/
+/src/main/generated/.cache/*

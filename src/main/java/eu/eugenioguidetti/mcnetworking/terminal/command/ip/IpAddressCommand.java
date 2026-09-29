@@ -87,7 +87,7 @@ public class IpAddressCommand implements UndoableTerminalCommand
 
         session.getSelectedInterface().setIpAddress(newIp);
 
-        l3NetEntity.sendGratuitousArpRequest(session.getSelectedInterface().getName());
+        l3NetEntity.getArpManager().ifPresent(arpManager -> arpManager.sendGratuitousArpRequest(session.getSelectedInterface().getName()));
     }
 
     @Override
@@ -112,6 +112,6 @@ public class IpAddressCommand implements UndoableTerminalCommand
 
         session.getSelectedInterface().setIpAddress(Ipv4CidrAddress.ALL_ZEROS);
 
-        l3NetEntity.sendGratuitousArpRequest(session.getSelectedInterface().getName());
+        l3NetEntity.getArpManager().ifPresent(arpManager -> arpManager.sendGratuitousArpRequest(session.getSelectedInterface().getName()));
     }
 }

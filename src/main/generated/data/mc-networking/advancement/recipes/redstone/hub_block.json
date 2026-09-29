@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "mc-networking:hub_block"
+        "recipes": "mc-networking:hub_block"
       },
       "trigger": "minecraft:recipe_unlocked"
     }

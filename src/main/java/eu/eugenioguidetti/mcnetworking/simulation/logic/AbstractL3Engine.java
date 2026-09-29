@@ -8,6 +8,7 @@ Data: 27/07/2026
 
 import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.ArpManager;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4CidrAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
@@ -19,6 +20,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Optional;
 
 import static eu.eugenioguidetti.mcnetworking.GlobalConstants.DEFAULT_TTL;
 import static eu.eugenioguidetti.mcnetworking.GlobalConstants.LOOPBACK_NAME;
@@ -246,7 +249,6 @@ public abstract class AbstractL3Engine implements L3Engine
         NetworkInterface outNic = l3netEntity.getInterface(outName);
         Ipv4CidrAddress outIp = outNic.getIpAddress();
 
-
         // Non puoi inviare pacchetti all'indirizzo di rete della tua rete
         if (nextHop.equals(outIp.getIndirizzoDiRete().address()))
         {
@@ -256,24 +258,34 @@ public abstract class AbstractL3Engine implements L3Engine
         }
 
 
-        MacAddress targetMac;
+        Optional<MacAddress> targetMac;
 
-        if (nextHop.equals(outIp.getIndirizzoDiBroadcast().address()))
+        if (nextHop.equals(Ipv4Address.BROADCAST) || nextHop.equals(outIp.getIndirizzoDiBroadcast().address()))
         {
-            targetMac = MacAddress.BROADCAST;
+            targetMac = Optional.of(MacAddress.BROADCAST);
         }
         else
         {
-            targetMac = l3netEntity.getArpManager().resolveMac(nextHop);
+            Optional<ArpManager> optionalArpManager = l3netEntity.getArpManager();
+            if (optionalArpManager.isEmpty())
+            {
+                // Nessun arpManager trovato
+
+                return;
+            }
+            ArpManager arpManager = optionalArpManager.get();
+
+
+            targetMac = arpManager.resolveMac(nextHop);
+
+            if (targetMac.isEmpty())
+            {
+                arpManager.enqueuePacket(packet, nextHop, outName);
+                return;
+            }
         }
 
-        if (targetMac == null)
-        {
-            l3netEntity.getArpManager().enqueuePacket(packet, nextHop, outName);
-            return;
-        }
-
-        EthernetFrame frame = new EthernetFrame(outNic.getMacAddress(), targetMac, packet);
+        EthernetFrame frame = new EthernetFrame(outNic.getMacAddress(), targetMac.get(), packet);
         l3netEntity.getStack().sendFrame(frame, outName);
     }
 
@@ -292,10 +304,8 @@ public abstract class AbstractL3Engine implements L3Engine
     }
 
     /**
-     * Rappresenta le informazioni
-     *
      * @param nextHop:    serve a determinare l'indirizzo MAC di destinazione tramite l'ARP manager
-     * @param outNicName: il nome dell'interfaccia da cui uscirà il pacchetto
+     * @param outNicName: è il nome dell'interfaccia da cui uscirà il pacchetto
      */
     public record OutPacketData(@NonNull Ipv4Address nextHop, @NonNull String outNicName)
     {

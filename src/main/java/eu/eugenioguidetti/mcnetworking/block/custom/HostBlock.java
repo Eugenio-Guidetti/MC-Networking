@@ -6,7 +6,6 @@ Cognome: Guidetti
 Data: 25/05/2026
  */
 
-import com.mojang.serialization.MapCodec;
 import eu.eugenioguidetti.mcnetworking.block.entity.HostBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.PingJob;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
@@ -14,7 +13,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -56,12 +54,6 @@ public class HostBlock extends NetworkingBlock
         return this.defaultBlockState().setValue(HORIZONTAL_FACING, context.getHorizontalDirection().getOpposite());
     }
 
-    @Override
-    protected @NonNull MapCodec<? extends BaseEntityBlock> codec()
-    {
-        return simpleCodec(HostBlock::new);
-    }
-
     @Nullable
     @Override
     public BlockEntity newBlockEntity(@NonNull BlockPos pos, @NonNull BlockState state)
@@ -100,13 +92,13 @@ public class HostBlock extends NetworkingBlock
             {
                 for (int i = 10; i < 26; i++)
                 {
-                    hostEntity.startJob(new PingJob(new Ipv4Address("192.168.1." + i), 1, hostEntity));
+                    hostEntity.startJob(new PingJob(new Ipv4Address("192.168.1." + i), 1, hostEntity), false);
                 }
 
-                hostEntity.startJob(new PingJob(new Ipv4Address("192.168.1.1"), 1, hostEntity));
-                hostEntity.startJob(new PingJob(new Ipv4Address("192.168.2.1"), 1, hostEntity));
-                hostEntity.startJob(new PingJob(new Ipv4Address("192.168.2.11"), 1, hostEntity));
-                hostEntity.startJob(new PingJob(new Ipv4Address("192.168.2.12"), 1, hostEntity));
+                hostEntity.startJob(new PingJob(new Ipv4Address("192.168.1.1"), 1, hostEntity), false);
+                hostEntity.startJob(new PingJob(new Ipv4Address("192.168.2.1"), 1, hostEntity), false);
+                hostEntity.startJob(new PingJob(new Ipv4Address("192.168.2.11"), 1, hostEntity), false);
+                hostEntity.startJob(new PingJob(new Ipv4Address("192.168.2.12"), 1, hostEntity), false);
             }
         }
 

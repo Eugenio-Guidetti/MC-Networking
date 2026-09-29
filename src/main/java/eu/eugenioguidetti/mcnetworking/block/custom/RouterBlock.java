@@ -6,10 +6,8 @@ Cognome: Guidetti
 Data: 03/06/2026
  */
 
-import com.mojang.serialization.MapCodec;
 import eu.eugenioguidetti.mcnetworking.block.entity.RouterBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -24,12 +22,6 @@ public class RouterBlock extends NetworkingBlock
     public RouterBlock(Properties settings)
     {
         super(settings);
-    }
-
-    @Override
-    protected @NonNull MapCodec<? extends BaseEntityBlock> codec()
-    {
-        return simpleCodec(RouterBlock::new);
     }
 
     @Nullable

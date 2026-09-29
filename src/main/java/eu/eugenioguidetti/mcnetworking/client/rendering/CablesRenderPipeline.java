@@ -6,21 +6,27 @@ Cognome: Guidetti
 Data: 31/05/2026
  */
 
-import com.mojang.blaze3d.IndexType;
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.renderpearl.api.pipeline.CompiledRenderPipeline;
+import com.mojang.renderpearl.api.pipeline.IndexType;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.Utils;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.CableType;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalCache;
 import eu.eugenioguidetti.mcnetworking.terminal.gui.ClientCommandHistoryCache;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.InvalidateRenderStateCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
@@ -44,6 +50,8 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.CABLES_TENSION;
+
 /**
  *
  * @author Eugenio Guidetti
@@ -65,9 +73,6 @@ public class CablesRenderPipeline
     private static CablesRenderPipeline instance;
     private BufferBuilder buffer;
     private MappableRingBuffer vertexBuffer;
-    // 26.2: VertexFormat#uploadImmediateIndexBuffer è stato rimosso, quindi ora gestiamo
-    // anche il buffer degli indici (ordinati per la trasparenza) manualmente, con lo stesso
-    // meccanismo di ring buffer già usato per i vertici.
     private MappableRingBuffer indexBuffer;
 
 
@@ -78,7 +83,7 @@ public class CablesRenderPipeline
         clearCables();
 
         LevelRenderEvents.END_EXTRACTION.register(this::extractCables);
-        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(this::renderAndDrawCables);
+        LevelRenderEvents.END_MAIN.register(this::renderAndDrawCables);
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
                                                        {
@@ -86,6 +91,18 @@ public class CablesRenderPipeline
                                                            TerminalCache.clearAll();
                                                            ClientCommandHistoryCache.clearAll();
                                                        });
+
+        InvalidateRenderStateCallback.EVENT.register(() ->
+                                                     {
+                                                         // Svuota la mappa dei cavi attivi quando si preme F3 + A
+                                                         CablesRenderPipeline.clearCables();
+
+                                                         // Forza la chiusura e la rigenerazione dei buffer se aperti
+                                                         if (this.buffer != null)
+                                                         {
+                                                             this.buffer = null;
+                                                         }
+                                                     });
     }
 
 
@@ -155,7 +172,8 @@ public class CablesRenderPipeline
         activeCables.clear();
     }
 
-    private void draw(Minecraft client, @NonNull RenderPipeline pipeline,
+    private void draw(Minecraft client,
+                      @NonNull RenderPipeline pipeline,
                       MeshData builtBuffer,
                       MeshData.DrawState drawParameters,
                       GpuBuffer vertices,
@@ -168,8 +186,6 @@ public class CablesRenderPipeline
         {
             // Sort the quads if there is translucency
             builtBuffer.sortQuads(ALLOCATOR, RenderSystem.getProjectionType().vertexSorting());
-            // In 26.2 pipeline.getVertexFormat().uploadImmediateIndexBuffer(...) non esiste più:
-            // carichiamo noi l'indice ordinato in un GpuBuffer dedicato (vedi uploadIndices sotto).
             indices = this.uploadIndices(builtBuffer.indexBuffer());
             indexType = builtBuffer.drawState().indexType();
         }
@@ -191,11 +207,14 @@ public class CablesRenderPipeline
                 .getDevice()
                 .createCommandEncoder()
                 .createRenderPass(() -> MCNetworking.MOD_ID + " cables render pipeline rendering",
-                                  client.gameRenderer.mainRenderTarget().getColorTextureView(), Optional.empty(),
+                                  client.gameRenderer.mainRenderTarget().getColorTextureView(),
+                                  Optional.empty(),
                                   client.gameRenderer.mainRenderTarget().getDepthTextureView(),
                                   OptionalDouble.empty()))
         {
-            renderPass.setPipeline(pipeline);
+            // Recupera la pipeline compilata dalla cache di RenderSystem
+            CompiledRenderPipeline compiledPipeline = RenderSystem.getCompiledPipeline(pipeline);
+            renderPass.setPipeline(compiledPipeline);
 
             RenderSystem.bindDefaultUniforms(renderPass);
             renderPass.setUniform("DynamicTransforms", dynamicTransforms);
@@ -208,9 +227,6 @@ public class CablesRenderPipeline
             renderPass.setVertexBuffer(0, vertices.slice(0, vertexBufferSize));
             renderPass.setIndexBuffer(indices, indexType);
 
-            // drawIndexed in 26.2 ha un nuovo ordine dei parametri:
-            // (indexCount, instanceCount, firstIndex, baseVertex, firstInstance).
-            // baseVertex resta 0 perché i vertici vengono sempre caricati dall'inizio della slice.
             renderPass.drawIndexed(drawParameters.indexCount(), 1, 0, 0, 0);
         }
 
@@ -273,106 +289,109 @@ public class CablesRenderPipeline
             Vector3f pA = new Vector3f((float) cable.posA.x, (float) cable.posA.y, (float) cable.posA.z);
             Vector3f pB = new Vector3f((float) cable.posB.x, (float) cable.posB.y, (float) cable.posB.z);
 
-            // 1. Calcoliamo la DIREZIONE in cui viaggia il cavo
-            Vector3f dir = new Vector3f(pB).sub(pA).normalize();
+            float distance = pA.distance(pB);
+            int segments = Math.clamp((int) (distance * 2), 16, 64);
+            float sag = distance * CABLES_TENSION;
 
-            // 2. Troviamo due vettori perpendicolari alla direzione per creare lo spessore
-            Vector3f up = new Vector3f(0, 1, 0);
-            // Prevenzione del bug matematico se il cavo va perfettamente dritto verso l'alto
-            if (Math.abs(dir.y) > 0.99f)
+            Vector3f prevPoint = new Vector3f(pA);
+
+            for (int s = 1; s <= segments; s++)
             {
-                up.set(1, 0, 0);
-            }
+                float t = (float) s / segments;
+                float currentSag = sag * 4 * t * (1 - t);
+                Vector3f currentPoint = new Vector3f(pA).lerp(pB, t).sub(0, currentSag, 0);
 
-            Vector3f right = new Vector3f(dir).cross(up).normalize().mul(cable.lineWidthMult);
-            up = new Vector3f(right).cross(dir).normalize().mul(cable.lineWidthMult); // Ricalcoliamo l'up per renderlo perfetto
+                Vector3f dir = new Vector3f(currentPoint).sub(prevPoint).normalize();
+                Vector3f overlapOffset = new Vector3f(dir).mul(0.02f);
+                Vector3f renderPrev = new Vector3f(prevPoint).sub(overlapOffset);
+                Vector3f renderCurrent = new Vector3f(currentPoint).add(overlapOffset);
 
-            // 3. Calcoliamo i 4 angoli attorno al punto centrale del cavo
-            Vector3f[] offsets = new Vector3f[]{new Vector3f(right).add(up),       // In alto a destra
-                    new Vector3f(right).sub(up),       // In basso a destra
-                    new Vector3f(right).negate().sub(up), // In basso a sinistra
-                    new Vector3f(right).negate().add(up)  // In alto a sinistra
-            };
+                Vector3f up = new Vector3f(0, 1, 0);
+                if (Math.abs(dir.y) > 0.99f)
+                {
+                    up.set(1, 0, 0);
+                }
 
-            // 4. Disegniamo le 4 facce (le "pareti" laterali del tubo 3D)
-            for (int i = 0; i < 4; i++)
-            {
-                int next = (i + 1) % 4;
+                Vector3f right = new Vector3f(dir).cross(up).normalize().mul(cable.lineWidthMult);
+                up = new Vector3f(right).cross(dir).normalize().mul(cable.lineWidthMult);
 
-                // Creiamo i 4 vertici per la singola faccia
-                Vector3f v1 = new Vector3f(pA).add(offsets[i]);
-                Vector3f v2 = new Vector3f(pA).add(offsets[next]);
-                Vector3f v3 = new Vector3f(pB).add(offsets[next]);
-                Vector3f v4 = new Vector3f(pB).add(offsets[i]);
+                Vector3f normalUp = new Vector3f(up).normalize();
+                Vector3f normalRight = new Vector3f(right).normalize();
 
-                // Calcoliamo la normale per l'illuminazione
-                Vector3f normal = new Vector3f(offsets[i]).add(offsets[next]).normalize();
+                // Faccia Verticale
+                addQuad(positionMatrix,
+                        matrices,
+                        r,
+                        g,
+                        b,
+                        a,
+                        new Vector3f(renderPrev).add(up),
+                        new Vector3f(renderPrev).sub(up),
+                        new Vector3f(renderCurrent).sub(up),
+                        new Vector3f(renderCurrent).add(up),
+                        normalRight);
 
-                // Diamo i vertici in senso antiorario al buffer
-                this.buffer
-                        .addVertex(positionMatrix, v1.x, v1.y, v1.z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normal.x, normal.y, normal.z);
-                this.buffer
-                        .addVertex(positionMatrix, v2.x, v2.y, v2.z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normal.x, normal.y, normal.z);
-                this.buffer
-                        .addVertex(positionMatrix, v3.x, v3.y, v3.z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normal.x, normal.y, normal.z);
-                this.buffer
-                        .addVertex(positionMatrix, v4.x, v4.y, v4.z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normal.x, normal.y, normal.z);
+                addQuad(positionMatrix,
+                        matrices,
+                        r,
+                        g,
+                        b,
+                        a,
+                        new Vector3f(renderPrev).add(up),
+                        new Vector3f(renderCurrent).add(up),
+                        new Vector3f(renderCurrent).sub(up),
+                        new Vector3f(renderPrev).sub(up),
+                        new Vector3f(normalRight).negate());
 
-                // 5. DISEGNIAMO IL TAPPO DI PARTENZA (Cap A)
-                // La faccia punta esattamente nella direzione opposta a cui va il cavo
-                Vector3f normalA = new Vector3f(dir).negate();
+                // Faccia Orizzontale
+                addQuad(positionMatrix,
+                        matrices,
+                        r,
+                        g,
+                        b,
+                        a,
+                        new Vector3f(renderPrev).add(right),
+                        new Vector3f(renderPrev).sub(right),
+                        new Vector3f(renderCurrent).sub(right),
+                        new Vector3f(renderCurrent).add(right),
+                        normalUp);
 
-                // Per pA invertiamo l'ordine dei vertici (0, 3, 2, 1) per renderlo visibile dall'esterno
-                this.buffer
-                        .addVertex(positionMatrix, pA.x + offsets[0].x, pA.y + offsets[0].y, pA.z + offsets[0].z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normalA.x, normalA.y, normalA.z);
-                this.buffer
-                        .addVertex(positionMatrix, pA.x + offsets[3].x, pA.y + offsets[3].y, pA.z + offsets[3].z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normalA.x, normalA.y, normalA.z);
-                this.buffer
-                        .addVertex(positionMatrix, pA.x + offsets[2].x, pA.y + offsets[2].y, pA.z + offsets[2].z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normalA.x, normalA.y, normalA.z);
-                this.buffer
-                        .addVertex(positionMatrix, pA.x + offsets[1].x, pA.y + offsets[1].y, pA.z + offsets[1].z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normalA.x, normalA.y, normalA.z);
+                addQuad(positionMatrix,
+                        matrices,
+                        r,
+                        g,
+                        b,
+                        a,
+                        new Vector3f(renderPrev).add(right),
+                        new Vector3f(renderCurrent).add(right),
+                        new Vector3f(renderCurrent).sub(right),
+                        new Vector3f(renderPrev).sub(right),
+                        new Vector3f(normalUp).negate());
 
-                // 6. DISEGNIAMO IL TAPPO DI ARRIVO (Cap B)
-                // La faccia punta esattamente nella stessa direzione del cavo
-                Vector3f normalB = new Vector3f(dir);
-
-                // Per pB usiamo l'ordine standard (0, 1, 2, 3)
-                this.buffer
-                        .addVertex(positionMatrix, pB.x + offsets[0].x, pB.y + offsets[0].y, pB.z + offsets[0].z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normalB.x, normalB.y, normalB.z);
-                this.buffer
-                        .addVertex(positionMatrix, pB.x + offsets[1].x, pB.y + offsets[1].y, pB.z + offsets[1].z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normalB.x, normalB.y, normalB.z);
-                this.buffer
-                        .addVertex(positionMatrix, pB.x + offsets[2].x, pB.y + offsets[2].y, pB.z + offsets[2].z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normalB.x, normalB.y, normalB.z);
-                this.buffer
-                        .addVertex(positionMatrix, pB.x + offsets[3].x, pB.y + offsets[3].y, pB.z + offsets[3].z)
-                        .setColor(r, g, b, a)
-                        .setNormal(matrices.last(), normalB.x, normalB.y, normalB.z);
+                prevPoint = currentPoint;
             }
         }
 
         matrices.popPose();
+    }
+
+    private void addQuad(Matrix4fc positionMatrix,
+                         @NonNull PoseStack matrices,
+                         int r,
+                         int g,
+                         int b,
+                         int a,
+                         @NonNull Vector3f v1,
+                         @NonNull Vector3f v2,
+                         @NonNull Vector3f v3,
+                         @NonNull Vector3f v4,
+                         @NonNull Vector3f normal)
+    {
+        PoseStack.Pose last = matrices.last();
+        this.buffer.addVertex(positionMatrix, v1.x, v1.y, v1.z).setColor(r, g, b, a).setNormal(last, normal.x, normal.y, normal.z);
+        this.buffer.addVertex(positionMatrix, v2.x, v2.y, v2.z).setColor(r, g, b, a).setNormal(last, normal.x, normal.y, normal.z);
+        this.buffer.addVertex(positionMatrix, v3.x, v3.y, v3.z).setColor(r, g, b, a).setNormal(last, normal.x, normal.y, normal.z);
+        this.buffer.addVertex(positionMatrix, v4.x, v4.y, v4.z).setColor(r, g, b, a).setNormal(last, normal.x, normal.y, normal.z);
     }
 
     private void executeDrawCall(Minecraft client, @SuppressWarnings("SameParameterValue") RenderPipeline pipeline)
@@ -416,7 +435,6 @@ public class CablesRenderPipeline
         // Copy vertex data into the vertex buffer
         CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
-        // 26.2: CommandEncoder#mapBuffer è stato rimosso, la mappatura si chiama ora sulla slice stessa
         try (GpuBufferSlice.MappedView mappedView = this.vertexBuffer
                 .currentBuffer()
                 .slice(0, builtBuffer.vertexBuffer().remaining())
@@ -428,10 +446,6 @@ public class CablesRenderPipeline
         return this.vertexBuffer.currentBuffer();
     }
 
-    // Nuovo metodo richiesto dalla 26.2: prima questo lavoro lo faceva
-    // pipeline.getVertexFormat().uploadImmediateIndexBuffer(...), rimosso in questa versione.
-    // Carichiamo quindi a mano l'indice (già ordinato per la trasparenza da sortQuads) in un
-    // ring buffer dedicato, con lo stesso identico procedimento usato sopra per i vertici.
     private @NonNull GpuBuffer uploadIndices(@NonNull ByteBuffer indexData)
     {
         int indexBufferSize = indexData.remaining();
