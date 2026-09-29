@@ -1,4 +1,4 @@
-## Changelog v1.1.3-26.2
+## Changelog {{VERSION}}
 
 * Added daemon jobs
 * Added CLI commands `job stop`, `job status`, `show jobs` to interact with jobs
@@ -11,7 +11,7 @@
 
 ---
 
-## Changelog v1.1.3-26.2
+## Changelog {{VERSION}}
 
 * Aggiunti job demoni
 * Aggiunti i comandi CLI `job stop`, `job status`, `show jobs` per interagire con i job

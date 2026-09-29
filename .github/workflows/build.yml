@@ -32,6 +32,21 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
 
+      - name: Leggi versioni da gradle.properties
+        id: props
+        run: |
+          # Estrae il valore dopo l'uguale rimuovendo eventuali spazi
+          MOD_VER=$(grep '^mod_version' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          MC_VER=$(grep '^minecraft_version' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          
+          echo "mod_version=\(MOD_VER" >> "\)GITHUB_OUTPUT"
+          echo "minecraft_version=\(MC_VER" >> "\)GITHUB_OUTPUT"
+
+      - name: Aggiorna versione nel CHANGELOG.md
+        run: |
+          FULL_VER="v\({{ steps.props.outputs.mod_version }}-\){{ steps.props.outputs.minecraft_version }}"
+          sed -i "s/{{VERSION}}/$FULL_VER/g" CHANGELOG.md
+
       - name: build
         run: ./gradlew build
 
@@ -62,6 +77,6 @@ jobs:
           version-type: release
           changelog-file: CHANGELOG.md
           loaders: fabric
-          game-versions: 26.2
+          game-versions: ${{ steps.props.outputs.minecraft_version }}
           dependencies: |
             fabric-api@required
