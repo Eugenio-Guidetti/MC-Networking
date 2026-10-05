@@ -8,6 +8,7 @@ Data: 12/06/2026
 
 import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.AbstractL2Engine;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.L3Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.ArpManager;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.ArpPayload;
@@ -62,10 +63,11 @@ public class EndDeviceL2Engine extends AbstractL2Engine
             return;
         }
 
-        if (frame.payload() instanceof Ipv4Packet packet)
+        L3Engine l3Engine = l3NetEntity.getStack().getL3Engine();
+        if (l3Engine != null && frame.payload() instanceof Ipv4Packet packet)
         {
             // Passa il payload IP al livello superiore
-            l3NetEntity.getStack().receivePacket(packet, from);
+            l3Engine.processPacket(packet, from);
         }
     }
 

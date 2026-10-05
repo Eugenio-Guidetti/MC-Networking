@@ -6,14 +6,15 @@ Cognome: Guidetti
 Data: 11/08/2026
  */
 
-import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.L4Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.Job;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.PingJob;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.jobs.TraceRouteJob;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.IcmpPayload;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.TransportSegment;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
@@ -34,26 +35,59 @@ public class IcmpManager
     }
 
 
-    public void handleIcmp(@NonNull IcmpPayload icmp, @NonNull Ipv4Packet originalPacket, String from)
+    public void handleIcmp(@NonNull IcmpPayload incomingIcmp, @NonNull Ipv4Packet packet, String from)
     {
-        if (icmp.type() == IcmpPayload.ECHO_REQUEST_TYPE)
+        // ECHO REQUEST
+        if (incomingIcmp.type() == IcmpPayload.ECHO_REQUEST_TYPE)
         {
-            Ipv4Address nicIp = l3NetEntity.getInterface(from).getIpAddress().address();
+            IcmpPayload echoReply = IcmpPayload.echoReply(incomingIcmp);
 
-            IcmpPayload echoReply = IcmpPayload.echoReply(icmp);
-            Ipv4Packet replyPacket = new Ipv4Packet(nicIp, originalPacket.sourceIp(), DEFAULT_TTL, echoReply);
+            Ipv4Address nicIp = l3NetEntity.getInterface(from).getIpAddress().address();
+            Ipv4Packet replyPacket = new Ipv4Packet(nicIp, packet.sourceIp(), DEFAULT_TTL, echoReply);
             l3NetEntity.getStack().sendPacket(replyPacket);
 
             return;
         }
 
-        Optional<IcmpPayload> originalIcmp = Optional.empty();
-        if (icmp.originalPacket() != null && icmp.originalPacket().payload() instanceof IcmpPayload)
+        // ECHO REPLY
+        if (incomingIcmp.type() == IcmpPayload.ECHO_REPLY_TYPE)
         {
-            originalIcmp = Optional.of((IcmpPayload) icmp.originalPacket().payload());
+            // Nelle Echo Reply l'identifier coincide con il jobId del processo che ha inviato la richiesta
+            handleIcmpJobReply(incomingIcmp, packet);
+            return;
         }
 
-        int jobId = originalIcmp.orElse(icmp).identifier();
+        // ERRORE ICMP
+        if (incomingIcmp.originalPacket() != null)
+        {
+            Ipv4Packet original = incomingIcmp.originalPacket();
+
+            if (original.payload() instanceof TransportSegment originalSegment)
+            {
+                // Errore relativo a un job L4
+                L4Engine l4Engine = l3NetEntity.getStack().getL4Engine();
+                if (l4Engine != null)
+                {
+                    l4Engine.handleIcmpError(incomingIcmp, packet.sourceIp());
+                }
+                return;
+            }
+
+            if (original.payload() instanceof IcmpPayload originalIcmp)
+            {
+                // Errore relativo a un job L3 (ping o traceroute)
+
+                // Qui il jobId nell'identifier è contenuto nel messaggio originale
+                int jobId = originalIcmp.identifier();
+
+                handleIcmpJobError(jobId, incomingIcmp, originalIcmp, packet);
+            }
+        }
+    }
+
+    private void handleIcmpJobReply(@NonNull IcmpPayload incomingIcmp, @NonNull Ipv4Packet packet)
+    {
+        int jobId = incomingIcmp.identifier();
 
         Optional<Job> foundJob = l3NetEntity.getJob(jobId);
 
@@ -61,15 +95,32 @@ public class IcmpManager
         {
             if (foundJob.get() instanceof PingJob pingJob)
             {
-                pingJob.handleIcmpReply(originalPacket);
+                pingJob.handleIcmpReply(incomingIcmp, packet.sourceIp(), packet.ttl());
             }
-            if (foundJob.get() instanceof TraceRouteJob traceRouteJob)
+            else if (foundJob.get() instanceof TraceRouteJob traceRouteJob)
             {
-                traceRouteJob.handleIcmpReply(originalPacket);
+                traceRouteJob.handleIcmpReply(incomingIcmp, packet.sourceIp());
             }
-
-            return;
         }
-        MCNetworking.LOGGER.info("Ricevuto: {} da: {} TTL: {}", icmp.getDisplayString(), originalPacket.sourceIp(), originalPacket.ttl());
+    }
+
+    private void handleIcmpJobError(int jobId,
+                                    @NonNull IcmpPayload incomingIcmp,
+                                    @NonNull IcmpPayload originalIcmp,
+                                    @NonNull Ipv4Packet packet)
+    {
+        Optional<Job> foundJob = l3NetEntity.getJob(jobId);
+
+        if (foundJob.isPresent())
+        {
+            if (foundJob.get() instanceof PingJob pingJob)
+            {
+                pingJob.handleIcmpError(originalIcmp.sequenceNumber(), incomingIcmp);
+            }
+            else if (foundJob.get() instanceof TraceRouteJob traceRouteJob)
+            {
+                traceRouteJob.handleIcmpError(incomingIcmp, originalIcmp, packet.sourceIp());
+            }
+        }
     }
 }

@@ -33,7 +33,7 @@ public class ConsoleSession
     private final GlobalPos globalPos;
 
     private final NetworkingBlockEntity device;
-    private TerminalMode currentMode = TerminalMode.USER_EXEC;
+    private TerminalMode currentMode = TerminalMode.PRIV_EXEC;
 
     // Se siamo in (config-if), qui salviamo quale interfaccia stiamo modificando
     private String selectedInterfaceName = null;

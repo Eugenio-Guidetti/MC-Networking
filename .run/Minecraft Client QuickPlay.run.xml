@@ -1,5 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-    <configuration default="false" name="Minecraft Client QuickPlay" type="Application" factoryName="Application">
+    <configuration default="false" name="Minecraft Client QuickPlay" type="Application" factoryName="Application"
+                   activateToolWindowBeforeRun="false">
         <envs>
             <env name="SDL_VIDEO_DRIVER" value="wayland"/>
         </envs>

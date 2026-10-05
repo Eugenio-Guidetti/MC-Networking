@@ -85,7 +85,7 @@ public class ServerboundPackets
         switch (signal)
         {
             case SIGINT:
-                session.sendOutput("^C");
+                session.sendOutput("^C\n");
                 break;
         }
     }

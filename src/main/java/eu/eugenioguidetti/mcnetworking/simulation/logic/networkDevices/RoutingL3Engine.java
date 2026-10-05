@@ -13,6 +13,7 @@ import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4CidrAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.IcmpPayload;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.TransportSegment;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -116,9 +117,15 @@ public class RoutingL3Engine extends AbstractL3Engine
     @Override
     protected void handleHigherLayerPayload(Ipv4Packet packet, String from)
     {
-        processChatMessage(packet, from);
+        //processChatMessage(packet, from);
 
         // TODO: I router scartano i messaggi applicativi, tranne SSH e Telnet, che verranno gestiti qui
+
+        if ((packet.payload() instanceof TransportSegment segment))
+        {
+            IcmpPayload portUnreachable = IcmpPayload.protocolUnreachable(packet);
+            l3netEntity.getStack().sendL3Payload(portUnreachable, packet.sourceIp());
+        }
     }
 
     @Override

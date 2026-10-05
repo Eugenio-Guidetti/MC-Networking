@@ -9,7 +9,6 @@ Data: 17/08/2026
 import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.IcmpPayload;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 
@@ -29,6 +28,7 @@ public class TraceRouteJob extends Job
     private final Ipv4Address destIp;
 
     private int currentSequence = 1;
+    private Ipv4Address currentHopIp = null;
     private boolean receivedReplyForSequence;
     private boolean routeCompleted = false;
 
@@ -65,7 +65,8 @@ public class TraceRouteJob extends Job
                 timeout();
             }
 
-            if (routeCompleted || (currentSequence - 1) / resends >= DEFAULT_TTL)
+            boolean roundFinished = (currentSequence - 1) % resends == 0;
+            if ((routeCompleted && roundFinished) || (currentSequence - 1) / resends >= DEFAULT_TTL)
             {
                 // Job completato
                 return true;
@@ -81,54 +82,79 @@ public class TraceRouteJob extends Job
     }
 
 
-    public void handleIcmpReply(@NonNull Ipv4Packet packet)
+    public void handleIcmpReply(@NonNull IcmpPayload icmp, @NonNull Ipv4Address sourceIp)
     {
-        IcmpPayload icmp = (IcmpPayload) packet.payload();
+        routeCompleted = true;
+        addOutput(icmp.sequenceNumber(), sourceIp);
+    }
 
-        if (icmp.type() == IcmpPayload.DESTINATION_UNREACHABLE_TYPE)
+    public void handleIcmpError(@NonNull IcmpPayload incomingIcmp, @NonNull IcmpPayload originalIcmp, @NonNull Ipv4Address sourceIp)
+    {
+        if (incomingIcmp.type() == IcmpPayload.TIME_EXCEEDED_TYPE)
         {
-            if (!receivedReplyForSequence)
+            addOutput(originalIcmp.sequenceNumber(), sourceIp);
+        }
+        else if (incomingIcmp.type() == IcmpPayload.DESTINATION_UNREACHABLE_TYPE)
+        {
+            if (originalIcmp.sequenceNumber() == currentSequence - 1 && !receivedReplyForSequence)
             {
-                // Evita di contare più volte un errore
                 receivedReplyForSequence = true;
+                this.currentHopIp = sourceIp;
 
-                timeout();
+                String errorFlag = switch (incomingIcmp.code())
+                {
+                    case IcmpPayload.DESTINATION_NETWORK_UNREACHABLE_CODE -> " !N \t\t";
+                    case IcmpPayload.DESTINATION_HOST_UNREACHABLE_CODE -> " !H \t\t";
+                    case IcmpPayload.PROTOCOL_UNREACHABLE_CODE -> " !P \t\t";
+                    default -> " !U \t\t";
+                };
+
+                session.sendOutput(errorFlag);
+
+                this.routeCompleted = true;
+
+                checkRoundEnd();
             }
-            return;
         }
+    }
 
-        if (icmp.type() == IcmpPayload.TIME_EXCEEDED_TYPE)
-        {
-            if (icmp.originalPacket() == null || !(icmp.originalPacket().payload() instanceof IcmpPayload originalIcmp))
-            {
-                return;
-            }
-
-            icmp = originalIcmp;
-        }
-        else if (icmp.type() != IcmpPayload.ECHO_REPLY_TYPE)
-        {
-            return;
-        }
-
-        if (icmp.sequenceNumber() != currentSequence - 1)
+    private void addOutput(int sequenceNumber, @NonNull Ipv4Address sourceIp)
+    {
+        if (sequenceNumber != currentSequence - 1)
         {
             return;
         }
 
         int waited = TRACEROUTE_INTERVAL_TICKS - timerTicks;
         receivedReplyForSequence = true;
+        this.currentHopIp = sourceIp;
 
         session.sendOutput(String.format("%3dgt\t\t", waited));
+        checkRoundEnd();
+    }
 
+    private void timeout()
+    {
+        receivedReplyForSequence = true;
+        session.sendOutput("  * \t\t");
+        checkRoundEnd();
+    }
+
+    private void checkRoundEnd()
+    {
+        // Se è l'ultima sonda del round di questo hop
         if ((currentSequence - 1) % resends == 0)
         {
-            session.sendOutput(String.format("%s\n", packet.sourceIp()));
-
-            if (icmp.type() == IcmpPayload.ECHO_REPLY_TYPE)
+            if (currentHopIp != null)
             {
-                routeCompleted = true;
+                session.sendOutput(String.format("%s\n", currentHopIp));
             }
+            else
+            {
+                session.sendOutput(Component.translatable("mcnetworking.cli.command.traceroute.timeout").getString());
+            }
+            // Reset per il prossimo hop
+            this.currentHopIp = null;
         }
     }
 
@@ -148,18 +174,6 @@ public class TraceRouteJob extends Job
         currentSequence++;
 
         netEntity.getStack().sendL3Payload(payload, destIp, ttl);
-    }
-
-    private void timeout()
-    {
-        receivedReplyForSequence = true;
-
-        session.sendOutput("*   \t\t");
-
-        if ((currentSequence - 1) % resends == 0)
-        {
-            session.sendOutput(Component.translatable("mcnetworking.cli.command.traceroute.timeout").getString());
-        }
     }
 
     @Override

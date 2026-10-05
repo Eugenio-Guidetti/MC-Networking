@@ -38,13 +38,20 @@ public abstract class Job
      */
     public final boolean tick()
     {
+        if (jobId == -1)
+        {
+            return false;
+        }
+
         if (receivedSignal == TerminalSignal.SIGINT || receivedSignal == TerminalSignal.SIGTERM)
         {
             terminate();
             return true;
         }
 
-        if (running && internalTick())
+        boolean completed = internalTick();
+
+        if (completed || !running)
         {
             terminate();
             return true;
@@ -53,8 +60,13 @@ public abstract class Job
         return false;
     }
 
-    private void terminate()
+    protected void terminate()
     {
+        if (!running)
+        {
+            return;
+        }
+
         running = false;
         onTerminate();
     }
@@ -85,8 +97,8 @@ public abstract class Job
             throw new IllegalStateException("jobId già assegnato");
         }
 
-        this.running = true;
         this.jobId = jobId;
+        this.running = true;
 
         if (this.netEntity.getLevel() instanceof ServerLevel)
         {

@@ -10,6 +10,24 @@ import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/*
+TODO:
+ --- Gameplay: ---
+ - item "busta" per creare PDU custom
+ .
+ --- Funzionalità: ---
+ - ServerBlockEntity (estende EndDeviceBlockEntity)
+ - Gestione servizi dei server: DNS, DHCP, HTTP
+ .
+ --- Terminale: ---
+ .
+ --- Comandi: ---
+ .
+ --- Protocolli: ---
+ - ICMP: gestione PROTOCOL UNREACHABLE e PORT UNREACHABLE
+ - routing
+ - DNS
+ */
 
 public class MCNetworking implements ModInitializer
 {

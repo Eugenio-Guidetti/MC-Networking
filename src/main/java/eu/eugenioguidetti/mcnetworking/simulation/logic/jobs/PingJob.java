@@ -9,7 +9,6 @@ Data: 21/07/2026
 import eu.eugenioguidetti.mcnetworking.block.entity.AbstractL3NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.IcmpPayload;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 
@@ -83,26 +82,8 @@ public class PingJob extends Job
         return false;
     }
 
-    public void handleIcmpReply(@NonNull Ipv4Packet packet)
+    public void handleIcmpReply(@NonNull IcmpPayload icmp, @NonNull Ipv4Address sourceIp, int ttl)
     {
-        IcmpPayload icmp = (IcmpPayload) packet.payload();
-
-        if (icmp.type() == IcmpPayload.TIME_EXCEEDED_TYPE || icmp.type() == IcmpPayload.DESTINATION_UNREACHABLE_TYPE)
-        {
-            if (!receivedReplyForSequence)
-            {
-                // Evita di contare più volte un errore
-                receivedReplyForSequence = true;
-
-                timeout();
-            }
-            return;
-        }
-        else if (icmp.type() != IcmpPayload.ECHO_REPLY_TYPE)
-        {
-            return;
-        }
-
         if (icmp.sequenceNumber() != currentSequence - 1)
         {
             return;
@@ -110,12 +91,28 @@ public class PingJob extends Job
 
         int waited = PING_INTERVAL_TICKS - timerTicks;
         session.sendOutput(String.format(Component.translatable("mcnetworking.cli.command.ping.reply_format").getString(),
-                                         packet.sourceIp(),
+                                         sourceIp,
                                          waited,
-                                         packet.ttl()));
+                                         ttl));
 
         stats.addReceivedPacket(waited);
         receivedReplyForSequence = true;
+    }
+
+    public void handleIcmpError(int sequenceNumber, @NonNull IcmpPayload icmp)
+    {
+        if (sequenceNumber != currentSequence - 1)
+        {
+            return;
+        }
+
+        if (icmp.type() == IcmpPayload.TIME_EXCEEDED_TYPE || icmp.type() == IcmpPayload.DESTINATION_UNREACHABLE_TYPE)
+        {
+            if (!receivedReplyForSequence)
+            {
+                timeout();
+            }
+        }
     }
 
     private void sendPing()
@@ -135,6 +132,9 @@ public class PingJob extends Job
     private void timeout()
     {
         receivedReplyForSequence = true;
+
+        // Anticipa l'invio del prossimo ping
+        timerTicks = Math.min(timerTicks, 20);
 
         session.sendOutput(Component.translatable("mcnetworking.cli.command.ping.timeout").getString());
     }

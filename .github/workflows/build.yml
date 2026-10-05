@@ -39,12 +39,12 @@ jobs:
           MOD_VER=$(grep '^mod_version' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
           MC_VER=$(grep '^minecraft_version' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
           
-          echo "mod_version=\(MOD_VER" >> "\)GITHUB_OUTPUT"
-          echo "minecraft_version=\(MC_VER" >> "\)GITHUB_OUTPUT"
+          echo "mod_version=$MOD_VER" >> "$GITHUB_OUTPUT"
+          echo "minecraft_version=$MC_VER" >> "$GITHUB_OUTPUT"
 
       - name: Aggiorna versione nel CHANGELOG.md
         run: |
-          FULL_VER="v\({{ steps.props.outputs.mod_version }}-\){{ steps.props.outputs.minecraft_version }}"
+          FULL_VER="v${{ steps.props.outputs.mod_version }}-${{ steps.props.outputs.minecraft_version }}"
           sed -i "s/{{VERSION}}/$FULL_VER/g" CHANGELOG.md
 
       - name: build
@@ -63,6 +63,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
+          body_path: CHANGELOG.md
           files: build/libs/*.jar
 
       - name: Publish to Modrinth

@@ -9,6 +9,8 @@ Data: 02/06/2026
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import org.jspecify.annotations.NonNull;
 
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.*;
+
 /**
  *
  * @author Eugenio Guidetti
@@ -16,6 +18,16 @@ import org.jspecify.annotations.NonNull;
 public record EthernetFrame(MacAddress sourceMac, MacAddress destMac, NetworkPayload payload) implements NetworkPayload
 {
     public static final int ETHERNET_HEADER_LENGTH = 18;
+
+    public int ethernetType()
+    {
+        return switch (payload)
+        {
+            case Ipv4Packet _ -> IPV4_ETH_TYPE;
+            case ArpPayload _ -> ARP_ETH_TYPE;
+            default -> DEFAULT_ETH_TYPE;
+        };
+    }
 
     public @NonNull EthernetFrame copy()
     {

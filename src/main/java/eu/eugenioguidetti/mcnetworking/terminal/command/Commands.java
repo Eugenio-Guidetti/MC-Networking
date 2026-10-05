@@ -42,5 +42,7 @@ public class Commands extends CommandRegistrar
 
         commands.put("help", new HelpCommand(this));
         commands.put("no", new NoCommand(this));
+
+        commands.put("test", new TestCommand());
     }
 }

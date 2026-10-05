@@ -9,10 +9,9 @@ Data: 12/06/2026
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.EthernetFrame;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.Ipv4Packet;
-import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.NetworkPayload;
+import eu.eugenioguidetti.mcnetworking.simulation.models.protocol.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static eu.eugenioguidetti.mcnetworking.GlobalConstants.DEFAULT_TTL;
 
@@ -24,6 +23,7 @@ public class NetworkStack
 {
     private L2Engine l2Engine = null;
     private L3Engine l3Engine = null;
+    private L4Engine l4Engine = null;
 
     private final NetworkingBlockEntity netEntity;
 
@@ -38,6 +38,23 @@ public class NetworkStack
         return netEntity;
     }
 
+    @Nullable
+    public L2Engine getL2Engine()
+    {
+        return l2Engine;
+    }
+
+    @Nullable
+    public L3Engine getL3Engine()
+    {
+        return l3Engine;
+    }
+
+    @Nullable
+    public L4Engine getL4Engine()
+    {
+        return l4Engine;
+    }
 
     public void setL2Engine(L2Engine processor)
     {
@@ -59,27 +76,22 @@ public class NetworkStack
         this.l3Engine = processor;
     }
 
+    public void setL4Engine(L4Engine processor)
+    {
+        if (this.l4Engine != null)
+        {
+            throw new IllegalArgumentException("l4Engine già inizializzata");
+        }
+
+        this.l4Engine = processor;
+    }
+
 
     public void receiveFrame(@NotNull EthernetFrame frame, @NotNull String from)
     {
-        // La logica base: passa il frame al componente di livello più basso configurato
         if (l2Engine != null)
         {
             l2Engine.processFrame(frame, from);
-
-            return;
-        }
-        if (frame.payload() instanceof Ipv4Packet packet)
-        {
-            receivePacket(packet, from);
-        }
-    }
-
-    public void receivePacket(Ipv4Packet packet, String from)
-    {
-        if (l3Engine != null)
-        {
-            l3Engine.processPacket(packet, from);
         }
     }
 
@@ -106,7 +118,7 @@ public class NetworkStack
 
     public void sendL3Payload(NetworkPayload payload, Ipv4Address destIp)
     {
-        sendL3Payload(payload, destIp, DEFAULT_TTL);
+        this.sendL3Payload(payload, destIp, DEFAULT_TTL);
     }
 
     public void sendL3Payload(NetworkPayload payload, Ipv4Address destIp, int ttl)
@@ -137,5 +149,26 @@ public class NetworkStack
         }
 
         l3Engine.sendPacket(packet, outPacketData);
+    }
+
+
+    public void sendL4Payload(NetworkPayload payload, Ipv4Address destIp, int sourcePort, int destPort, TransportProtocol protocol)
+    {
+        if (l4Engine == null)
+        {
+            return;
+        }
+
+        l4Engine.sendPayload(payload, destIp, sourcePort, destPort, protocol);
+    }
+
+    public void sendSegment(TransportSegment segment, Ipv4Address destIp)
+    {
+        if (l4Engine == null)
+        {
+            return;
+        }
+
+        l4Engine.sendSegment(segment, destIp);
     }
 }

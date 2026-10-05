@@ -11,6 +11,7 @@ import eu.eugenioguidetti.mcnetworking.block.registry.ModBlockEntities;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkInterface;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.endDevices.EndDeviceL2Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.logic.endDevices.EndDeviceL3Engine;
+import eu.eugenioguidetti.mcnetworking.simulation.logic.endDevices.EndDeviceL4Engine;
 import eu.eugenioguidetti.mcnetworking.simulation.models.Ipv4Address;
 import eu.eugenioguidetti.mcnetworking.simulation.models.MacAddress;
 import eu.eugenioguidetti.mcnetworking.simulation.models.cables.ConnectorType;
@@ -30,6 +31,7 @@ public class HostBlockEntity extends AbstractL3NetworkingBlockEntity
 {
     private final EndDeviceL2Engine l2Engine = new EndDeviceL2Engine(this);
     private final EndDeviceL3Engine l3Engine = new EndDeviceL3Engine(this);
+    private final EndDeviceL4Engine l4Engine = new EndDeviceL4Engine(this);
 
     @Nullable
     private Ipv4Address dnsServer = null;
@@ -40,11 +42,15 @@ public class HostBlockEntity extends AbstractL3NetworkingBlockEntity
 
         this.stack.setL2Engine(l2Engine);
         this.stack.setL3Engine(l3Engine);
+        this.stack.setL4Engine(l4Engine);
 
         hostname = "Host";
 
         Direction facing = state.getValue(HostBlock.HORIZONTAL_FACING);
         putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "eth0", pos, facing, ConnectorType.RJ45));
+
+        // putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "up", pos, Direction.UP, ConnectorType.FIBER));
+        // putInterface(new NetworkInterface(MacAddress.ALL_ZEROS, "down", pos, Direction.DOWN, ConnectorType.FIBER));
     }
 
 

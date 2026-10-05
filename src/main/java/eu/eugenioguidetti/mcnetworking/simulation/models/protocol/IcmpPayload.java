@@ -23,6 +23,9 @@ public record IcmpPayload(int type, int code, int identifier, int sequenceNumber
 
     public static final int DESTINATION_NETWORK_UNREACHABLE_CODE = 0;
     public static final int DESTINATION_HOST_UNREACHABLE_CODE = 1;
+    public static final int PROTOCOL_UNREACHABLE_CODE = 2;
+    public static final int PORT_UNREACHABLE_CODE = 3;
+
 
     @Override
     public @NonNull String getDisplayString()
@@ -41,14 +44,14 @@ public record IcmpPayload(int type, int code, int identifier, int sequenceNumber
         }
         if (type == DESTINATION_UNREACHABLE_TYPE)
         {
-            if (code == DESTINATION_NETWORK_UNREACHABLE_CODE)
+            return switch (code)
             {
-                return "ICMP Destination Network Unreachable for " + originalPacket;
-            }
-            else if (code == DESTINATION_HOST_UNREACHABLE_CODE)
-            {
-                return "ICMP Destination Host Unreachable for " + originalPacket;
-            }
+                case DESTINATION_NETWORK_UNREACHABLE_CODE -> "ICMP Destination Network Unreachable for " + originalPacket;
+                case DESTINATION_HOST_UNREACHABLE_CODE -> "ICMP Destination Host Unreachable for " + originalPacket;
+                case PROTOCOL_UNREACHABLE_CODE -> "ICMP Destination Protocol Unreachable for " + originalPacket;
+                case PORT_UNREACHABLE_CODE -> "ICMP Destination Port Unreachable for " + originalPacket;
+                default -> "ICMP Destination Unreachable (code=" + code + ") for " + originalPacket;
+            };
         }
         return "ICMP Type " + type;
     }
@@ -74,18 +77,28 @@ public record IcmpPayload(int type, int code, int identifier, int sequenceNumber
         return new IcmpPayload(ECHO_REPLY_TYPE, 0, echoRequest.identifier(), echoRequest.sequenceNumber(), null);
     }
 
-    public static @NonNull IcmpPayload destinationNetworkUnreachable(Ipv4Packet originalPacket)
+    public static @NonNull IcmpPayload destinationNetworkUnreachable(@NonNull Ipv4Packet originalPacket)
     {
         return new IcmpPayload(DESTINATION_UNREACHABLE_TYPE, DESTINATION_NETWORK_UNREACHABLE_CODE, 0, 0, originalPacket);
     }
 
-    public static @NonNull IcmpPayload destinationHostUnreachable(Ipv4Packet originalPacket)
+    public static @NonNull IcmpPayload destinationHostUnreachable(@NonNull Ipv4Packet originalPacket)
     {
         return new IcmpPayload(DESTINATION_UNREACHABLE_TYPE, DESTINATION_HOST_UNREACHABLE_CODE, 0, 0, originalPacket);
     }
 
-    public static @NonNull IcmpPayload timeExceeded(Ipv4Packet originalPacket)
+    public static @NonNull IcmpPayload timeExceeded(@NonNull Ipv4Packet originalPacket)
     {
         return new IcmpPayload(TIME_EXCEEDED_TYPE, 0, 0, 0, originalPacket);
+    }
+
+    public static @NonNull IcmpPayload protocolUnreachable(@NonNull Ipv4Packet originalPacket)
+    {
+        return new IcmpPayload(DESTINATION_UNREACHABLE_TYPE, PROTOCOL_UNREACHABLE_CODE, 0, 0, originalPacket);
+    }
+
+    public static @NonNull IcmpPayload portUnreachable(@NonNull Ipv4Packet originalPacket)
+    {
+        return new IcmpPayload(DESTINATION_UNREACHABLE_TYPE, PORT_UNREACHABLE_CODE, 0, 0, originalPacket);
     }
 }
