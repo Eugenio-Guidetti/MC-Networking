@@ -27,6 +27,8 @@ public class ModPackets
         registry.register(TerminalOutputS2CPayload.TYPE, TerminalOutputS2CPayload.CODEC);
         registry.register(CommandCompletionS2CPayload.TYPE, CommandCompletionS2CPayload.CODEC);
 
+        registry.register(WebuiCliHistoryS2CPayload.TYPE, WebuiCliHistoryS2CPayload.CODEC);
+
         // I GlobalReceiver vengono registrati solo sul client nella classe ClientBoundPackets
     }
 
@@ -38,10 +40,15 @@ public class ModPackets
         registry.register(TerminalSignalC2SPayload.TYPE, TerminalSignalC2SPayload.CODEC);
         registry.register(CommandCompletionC2SPayload.TYPE, CommandCompletionC2SPayload.CODEC);
 
+        registry.register(WebuiCliHistoryC2SPayload.TYPE, WebuiCliHistoryC2SPayload.CODEC);
+
+
         ServerPlayNetworking.registerGlobalReceiver(TerminalCommandC2SPayload.TYPE, ServerboundPackets::handleTerminalCommandC2SPacket);
         ServerPlayNetworking.registerGlobalReceiver(TerminalSignalC2SPayload.TYPE, ServerboundPackets::handleTerminalSignalC2SPacket);
         ServerPlayNetworking.registerGlobalReceiver(CommandCompletionC2SPayload.TYPE,
                                                     ServerboundPackets::handleCommandCompletionC2SPayload);
+
+        ServerPlayNetworking.registerGlobalReceiver(WebuiCliHistoryC2SPayload.TYPE, ServerboundPackets::handleWebuiCliHistoryC2SPayload);
     }
 
     public static void registerPackets()

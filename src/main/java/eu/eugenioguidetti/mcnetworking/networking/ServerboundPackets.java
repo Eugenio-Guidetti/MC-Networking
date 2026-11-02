@@ -111,4 +111,21 @@ public class ServerboundPackets
             session.sendOutput(availableCommands);
         }
     }
+
+
+    public static void handleWebuiCliHistoryC2SPayload(@NonNull WebuiCliHistoryC2SPayload payload,
+                                                       ServerPlayNetworking.@NonNull Context context)
+    {
+        GlobalPos globalPos = payload.pos();
+        ServerLevel level = context.server().getLevel(globalPos.dimension());
+        BlockPos pos = globalPos.pos();
+
+        TerminalCache.CacheValue cached = TerminalCache.getOrCreateSession(level, pos);
+
+        ServerPlayNetworking.send(context.player(),
+                                  new WebuiCliHistoryS2CPayload(cached.history(),
+                                                                cached.session().getDevice().getForegroundJob().isEmpty(),
+                                                                cached.session().getPrompt(),
+                                                                globalPos));
+    }
 }

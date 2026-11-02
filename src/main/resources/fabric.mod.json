@@ -20,7 +20,8 @@
       "eu.eugenioguidetti.mcnetworking.MCNetworking"
     ],
     "client": [
-      "eu.eugenioguidetti.mcnetworking.client.MCNetworkingClient"
+      "eu.eugenioguidetti.mcnetworking.client.MCNetworkingClient",
+      "eu.eugenioguidetti.mcnetworking.webui.WebUiClientModInitializer"
     ],
     "fabric-datagen": [
       "eu.eugenioguidetti.mcnetworking.datagen.MCNetworkingDataGenerator"

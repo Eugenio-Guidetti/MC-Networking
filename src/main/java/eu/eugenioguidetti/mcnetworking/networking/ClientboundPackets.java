@@ -9,7 +9,9 @@ Data: 21/08/2026
 import eu.eugenioguidetti.mcnetworking.networking.packet.CommandCompletionS2CPayload;
 import eu.eugenioguidetti.mcnetworking.networking.packet.OpenTerminalS2CPayload;
 import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalOutputS2CPayload;
+import eu.eugenioguidetti.mcnetworking.networking.packet.WebuiCliHistoryS2CPayload;
 import eu.eugenioguidetti.mcnetworking.terminal.gui.TerminalScreen;
+import eu.eugenioguidetti.mcnetworking.webui.ClientWorldScanner;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import org.jspecify.annotations.NonNull;
@@ -26,7 +28,10 @@ public class ClientboundPackets
         ClientPlayNetworking.registerGlobalReceiver(TerminalOutputS2CPayload.TYPE, ClientboundPackets::handleTerminalOutputS2CPacket);
         ClientPlayNetworking.registerGlobalReceiver(CommandCompletionS2CPayload.TYPE,
                                                     ClientboundPackets::handleCommandCompletionS2CPayload);
+
+        ClientPlayNetworking.registerGlobalReceiver(WebuiCliHistoryS2CPayload.TYPE, ClientboundPackets::handleWebuiCliHistoryS2CPayload);
     }
+
 
     public static void handleOpenTerminalS2CPacket(@NonNull OpenTerminalS2CPayload payload, ClientPlayNetworking.@NonNull Context context)
     {
@@ -58,5 +63,12 @@ public class ClientboundPackets
                 terminalScreen.setInputFieldValue(payload.autocompleted());
             }
         }
+    }
+
+
+    public static void handleWebuiCliHistoryS2CPayload(@NonNull WebuiCliHistoryS2CPayload payload,
+                                                       ClientPlayNetworking.@NonNull Context context)
+    {
+        ClientWorldScanner.completePendingRequest(payload);
     }
 }
