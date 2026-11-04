@@ -22,7 +22,6 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,7 +36,7 @@ public class ClientWorldScanner
     {
     }
 
-    private static final Map<BlockPos, CompletableFuture<List<String>>> PENDING_REQUESTS = new ConcurrentHashMap<>();
+    private static final Map<BlockPos, CompletableFuture<WebuiCliHistoryS2CPayload>> PENDING_REQUESTS = new ConcurrentHashMap<>();
 
     public static @NonNull CompletableFuture<Map<BlockPos, DeviceSummary>> getLoadedDevicesFuture()
     {
@@ -134,10 +133,10 @@ public class ClientWorldScanner
     }
 
 
-    public static @NonNull CompletableFuture<List<String>> getBlockEntityCliHistoryFuture(@NonNull BlockPos pos)
+    public static @NonNull CompletableFuture<WebuiCliHistoryS2CPayload> getBlockEntityCliHistoryFuture(@NonNull BlockPos pos)
     {
         Minecraft client = Minecraft.getInstance();
-        CompletableFuture<List<String>> queryFuture = new CompletableFuture<>();
+        CompletableFuture<WebuiCliHistoryS2CPayload> queryFuture = new CompletableFuture<>();
 
         // Spediamo l'operazione sul main thread del client di gioco
         client.execute(() ->
@@ -146,7 +145,7 @@ public class ClientWorldScanner
                            {
                                if (client.level == null || client.player == null)
                                {
-                                   queryFuture.complete(List.of());
+                                   queryFuture.complete(null);
                                    return;
                                }
 
@@ -170,12 +169,12 @@ public class ClientWorldScanner
     {
         BlockPos pos = payload.pos().pos();
 
-        CompletableFuture<List<String>> pending = ClientWorldScanner.PENDING_REQUESTS.remove(pos);
+        CompletableFuture<WebuiCliHistoryS2CPayload> pending = ClientWorldScanner.PENDING_REQUESTS.remove(pos);
 
         if (pending != null)
         {
             // Completa la Future attesa dal thread HTTP del Web Server
-            pending.complete(payload.history());
+            pending.complete(payload);
         }
     }
 }

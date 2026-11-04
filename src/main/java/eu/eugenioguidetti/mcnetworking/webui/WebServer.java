@@ -8,9 +8,11 @@ Data: 05/10/2026
 
 import com.sun.net.httpserver.HttpServer;
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
-import eu.eugenioguidetti.mcnetworking.webui.handlers.BloccoHandler;
-import eu.eugenioguidetti.mcnetworking.webui.handlers.CliHandler;
+import eu.eugenioguidetti.mcnetworking.webui.handlers.DeviceListHandler;
 import eu.eugenioguidetti.mcnetworking.webui.handlers.StaticResourceHandler;
+import eu.eugenioguidetti.mcnetworking.webui.handlers.cli.CliHandler;
+import eu.eugenioguidetti.mcnetworking.webui.handlers.cli.CliSendHandler;
+import eu.eugenioguidetti.mcnetworking.webui.handlers.cli.CliStreamHandler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,8 +44,10 @@ public class WebServer
             StaticResourceHandler.serveFile(path, exchange);
         }));
 
-        server.createContext("/device", new BloccoHandler());
+        server.createContext("/device", new DeviceListHandler());
         server.createContext("/device/cli", new CliHandler());
+        server.createContext("/device/cli/stream", new CliStreamHandler());
+        server.createContext("/device/cli/send", new CliSendHandler());
 
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
 

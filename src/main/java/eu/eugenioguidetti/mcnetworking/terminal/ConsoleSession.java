@@ -21,6 +21,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 import static eu.eugenioguidetti.mcnetworking.GlobalConstants.LOOPBACK_NAME;
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.TERMINAL_OUTPUT_UPDATES_BROADCAST_RADIUS;
 
 /**
  *
@@ -60,7 +61,7 @@ public class ConsoleSession
 
         List<String> historySnapshot = List.copyOf(cached.history());
 
-        for (ServerPlayer player : PlayerLookup.around(level, pos, 16))
+        for (ServerPlayer player : PlayerLookup.around(level, pos, TERMINAL_OUTPUT_UPDATES_BROADCAST_RADIUS))
         {
             ServerPlayNetworking.send(player,
                                       new TerminalOutputS2CPayload(historySnapshot,

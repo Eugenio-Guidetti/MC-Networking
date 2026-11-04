@@ -11,6 +11,7 @@ import eu.eugenioguidetti.mcnetworking.networking.packet.OpenTerminalS2CPayload;
 import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalOutputS2CPayload;
 import eu.eugenioguidetti.mcnetworking.networking.packet.WebuiCliHistoryS2CPayload;
 import eu.eugenioguidetti.mcnetworking.terminal.gui.TerminalScreen;
+import eu.eugenioguidetti.mcnetworking.webui.CliStreamManager;
 import eu.eugenioguidetti.mcnetworking.webui.ClientWorldScanner;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -38,8 +39,12 @@ public class ClientboundPackets
         Minecraft.getInstance().gui.setScreen(new TerminalScreen(payload));
     }
 
-    public static void handleTerminalOutputS2CPacket(TerminalOutputS2CPayload payload, ClientPlayNetworking.@NonNull Context context)
+    public static void handleTerminalOutputS2CPacket(@NonNull TerminalOutputS2CPayload payload,
+                                                     ClientPlayNetworking.@NonNull Context context)
     {
+        // Invia l'output aggiornato alla WebUI
+        CliStreamManager.broadcast(payload);
+
         Minecraft client = Minecraft.getInstance();
 
         // Controlliamo se il giocatore ha aperto la schermata giusta

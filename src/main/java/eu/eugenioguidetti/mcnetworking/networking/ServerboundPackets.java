@@ -24,6 +24,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 import java.util.Optional;
 
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.TERMINAL_OUTPUT_UPDATES_BROADCAST_RADIUS;
+
 /**
  *
  * @author Eugenio Guidetti
@@ -51,9 +53,16 @@ public class ServerboundPackets
 
         List<String> historySnapshot = List.copyOf(cached.history());
 
-        // Invia il comando ricevuto agli altri client
-        for (ServerPlayer player : PlayerLookup.around(level, pos, 16))
+        // Invia l'output aggiornato a chi ha inviato il comando e tutti gli altri player in un raggio di 64 blocchi
+        ServerPlayNetworking.send(context.player(),
+                                  new TerminalOutputS2CPayload(historySnapshot, true, cached.session().getPrompt(), globalPos));
+        for (ServerPlayer player : PlayerLookup.around(level, pos, TERMINAL_OUTPUT_UPDATES_BROADCAST_RADIUS))
         {
+            if (player.equals(context.player()))
+            {
+                continue;
+            }
+
             ServerPlayNetworking.send(player, new TerminalOutputS2CPayload(historySnapshot, true, cached.session().getPrompt(), globalPos));
         }
 

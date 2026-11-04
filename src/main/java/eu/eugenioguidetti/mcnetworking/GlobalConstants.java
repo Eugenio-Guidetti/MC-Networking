@@ -19,6 +19,9 @@ public class GlobalConstants
     public static final int CABLES_MAX_LENGTH_SQUARED = 22 * 22;
 
 
+    public static final int TERMINAL_OUTPUT_UPDATES_BROADCAST_RADIUS = 64;
+
+
     public static final int MAX_JOBS = 65535;
 
 

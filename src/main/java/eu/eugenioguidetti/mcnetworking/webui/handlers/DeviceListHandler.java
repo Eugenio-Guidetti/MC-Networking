@@ -15,9 +15,7 @@ import net.minecraft.core.BlockPos;
 import org.jspecify.annotations.NonNull;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -29,7 +27,7 @@ import static eu.eugenioguidetti.mcnetworking.webui.utils.WebUiUtils.sendTextRes
  * @author Eugenio Guidetti
  */
 
-public class BloccoHandler implements HttpHandler
+public class DeviceListHandler implements HttpHandler
 {
     @Override
     public void handle(@NonNull HttpExchange exchange) throws IOException
@@ -99,28 +97,35 @@ public class BloccoHandler implements HttpHandler
         sb.append(translationMap.get("MSG_DEVICE_INDEX_AZIONI"));
         sb.append("</th></tr>");
 
-        for (var entry : loadedDevices.entrySet())
+        List<ClientWorldScanner.DeviceSummary> loadedDevicesValues = loadedDevices
+                .values()
+                .stream()
+                .sorted(Comparator.comparing(ClientWorldScanner.DeviceSummary::hostname))
+                .toList();
+
+
+        for (var entry : loadedDevicesValues)
         {
             sb.append("<tr>");
 
             sb.append("<td>");
-            sb.append(entry.getValue().hostname());
+            sb.append(entry.hostname());
             sb.append("</td>");
 
             sb.append("<td>");
-            sb.append(entry.getValue().tipo());
+            sb.append(entry.tipo());
             sb.append("</td>");
 
             sb.append("<td>");
-            sb.append(entry.getValue().pos().toShortString());
+            sb.append(entry.pos().toShortString());
             sb.append("</td>");
 
             sb.append("<td><a href = \"/device/cli?x=");
-            sb.append(entry.getKey().getX());
+            sb.append(entry.pos().getX());
             sb.append("&y=");
-            sb.append(entry.getKey().getY());
+            sb.append(entry.pos().getY());
             sb.append("&z=");
-            sb.append(entry.getKey().getZ());
+            sb.append(entry.pos().getZ());
             sb.append("\">");
             sb.append(translationMap.get("MSG_DEVICE_INDEX_OPEN_CLI"));
             sb.append("</a></td>");

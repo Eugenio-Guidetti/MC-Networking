@@ -1,4 +1,4 @@
-package eu.eugenioguidetti.mcnetworking.webui.handlers;
+package eu.eugenioguidetti.mcnetworking.webui.handlers.cli;
 
 /*
 Nome: Eugenio
@@ -9,9 +9,13 @@ Data: 02/11/2026
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import eu.eugenioguidetti.mcnetworking.block.entity.NetworkingBlockEntity;
+import eu.eugenioguidetti.mcnetworking.networking.packet.WebuiCliHistoryS2CPayload;
 import eu.eugenioguidetti.mcnetworking.webui.ClientWorldScanner;
+import eu.eugenioguidetti.mcnetworking.webui.handlers.StaticResourceHandler;
+import eu.eugenioguidetti.mcnetworking.webui.utils.WebUiUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.NonNull;
 
@@ -19,6 +23,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -45,25 +50,18 @@ public class CliHandler implements HttpHandler
         String response;
         int statusCode;
 
-        try
+        Optional<GlobalPos> optionalPos = WebUiUtils.getPos(exchange);
+        if (optionalPos.isEmpty())
         {
-            if (!params.containsKey("x") || !params.containsKey("y") || !params.containsKey("z"))
-            {
-                redirectToDeviceList(exchange);
-            }
-            else
-            {
-                int x = Integer.parseInt(params.get("x"));
-                int y = Integer.parseInt(params.get("y"));
-                int z = Integer.parseInt(params.get("z"));
-                BlockPos pos = new BlockPos(x, y, z);
-
-                serveCli(pos, exchange);
-            }
-
             return;
         }
+        GlobalPos pos = optionalPos.get();
 
+        try
+        {
+            serveCli(pos.pos(), exchange);
+            return;
+        }
         catch (NumberFormatException e)
         {
             statusCode = 400;
@@ -98,11 +96,13 @@ public class CliHandler implements HttpHandler
         }
 
 
-        CompletableFuture<List<String>> blockEntityCliHistoryFuture = ClientWorldScanner.getBlockEntityCliHistoryFuture(pos);
-        List<String> history = blockEntityCliHistoryFuture.get(3, TimeUnit.SECONDS);
+        CompletableFuture<WebuiCliHistoryS2CPayload> blockEntityCliHistoryFuture = ClientWorldScanner.getBlockEntityCliHistoryFuture(pos);
+        WebuiCliHistoryS2CPayload payload = blockEntityCliHistoryFuture.get(3, TimeUnit.SECONDS);
 
         Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("CLI_HISTORY", getHistoryHtml(history));
+        placeholders.put("CLI_HISTORY", getHistoryHtml(payload.history()));
+        placeholders.put("CLI_ROW_STYLE_DISPLAY", payload.showPrompt() ? "" : "style=\"display: none;\"");
+        placeholders.put("CLI_PROMPT", payload.currentPrompt());
         StaticResourceHandler.serveTemplate("/device/cli/index.html", placeholders, exchange);
     }
 
@@ -110,15 +110,17 @@ public class CliHandler implements HttpHandler
     {
         if (history.isEmpty())
         {
-            return "Nessun comando inviato";
+            return "";
         }
 
         StringBuilder sb = new StringBuilder();
-        for (String command : history)
+        for (int i = 0; i < history.size() - 1; i++)
         {
-            sb.append(command);
-            sb.append("<br>");
+            String line = history.get(i);
+            sb.append(line);
+            sb.append("\n");
         }
+        sb.append(history.getLast());
 
         return sb.toString();
     }
