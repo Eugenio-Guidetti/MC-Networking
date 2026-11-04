@@ -46,4 +46,7 @@ public class GlobalConstants
 
     public static final int DNS_PORT = 53;
     public static final int HTTP_PORT = 80;
+
+
+    public static final int WEBUI_PORT = 14567;
 }

@@ -31,21 +31,21 @@ public class CliSendHandler implements HttpHandler
     {
         if (!exchange.getRequestMethod().equalsIgnoreCase("POST"))
         {
+            exchange.getResponseHeaders().set("Allow", "POST");
             sendTextResponse("Metodo errato", 405, exchange);
             return;
         }
 
-        Optional<GlobalPos> optionalPos = WebUiUtils.getPos(exchange);
-        if (optionalPos.isEmpty())
+        Optional<GlobalPos> pos = WebUiUtils.getPos(exchange);
+        if (pos.isEmpty())
         {
             return;
         }
-        GlobalPos pos = optionalPos.get();
 
         byte[] bodyBytes = exchange.getRequestBody().readAllBytes();
         String comando = new String(bodyBytes, StandardCharsets.UTF_8).trim();
 
-        ClientPlayNetworking.send(new TerminalCommandC2SPayload(comando, pos));
+        ClientPlayNetworking.send(new TerminalCommandC2SPayload(comando, pos.orElse(null)));
 
         exchange.sendResponseHeaders(204, -1);
         exchange.close();

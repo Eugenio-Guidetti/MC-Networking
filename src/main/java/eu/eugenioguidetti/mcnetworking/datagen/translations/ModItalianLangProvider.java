@@ -64,6 +64,9 @@ public class ModItalianLangProvider extends FabricLanguageProvider
         translationBuilder.add("itemGroup." + MCNetworking.MOD_ID + ".end_devices", "MCNetworking: Dispositivi Finali");
         translationBuilder.add("itemGroup." + MCNetworking.MOD_ID + ".network_devices", "MCNetworking: Dispositivi di Rete");
 
+        // --- UI ---
+        translationBuilder.add("ui." + MCNetworking.MOD_ID + ".open_in_webui", "Apri nella WebUI");
+
 
         // --- CLI ---
         translationBuilder.add("mcnetworking.cli.welcome_message",

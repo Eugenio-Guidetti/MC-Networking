@@ -7,6 +7,7 @@ Data: 03/11/2026
  */
 
 import com.google.gson.Gson;
+import eu.eugenioguidetti.mcnetworking.networking.packet.CommandCompletionS2CPayload;
 import eu.eugenioguidetti.mcnetworking.networking.packet.TerminalOutputS2CPayload;
 import eu.eugenioguidetti.mcnetworking.webui.dto.CliUpdate;
 import net.minecraft.core.GlobalPos;
@@ -58,7 +59,7 @@ public class CliStreamManager
     /**
      * Invia a tutti i browser connessi il nuovo contenuto della CLI.
      */
-    public static void broadcast(@NonNull TerminalOutputS2CPayload payload)
+    public static void broadcastCliHistory(@NonNull TerminalOutputS2CPayload payload)
     {
         GlobalPos pos = payload.globalPos();
 
@@ -85,7 +86,23 @@ public class CliStreamManager
         {
             for (BlockingQueue<String> queue : list)
             {
-                queue.offer(jsonPayload);
+                queue.offer("data: " + jsonPayload + "\n\n");
+            }
+        }
+    }
+
+    /**
+     * Invia a tutti i browser connessi il comando completato
+     */
+    public static void broadcastCompletion(@NonNull CommandCompletionS2CPayload payload)
+    {
+        String sseMessage = "event: completion\ndata: " + payload.autocompleted() + "\n\n";
+
+        for (List<BlockingQueue<String>> list : SUBSCRIBERS.values())
+        {
+            for (BlockingQueue<String> queue : list)
+            {
+                queue.offer(sseMessage);
             }
         }
     }

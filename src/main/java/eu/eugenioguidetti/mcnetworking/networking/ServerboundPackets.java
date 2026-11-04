@@ -81,7 +81,7 @@ public class ServerboundPackets
 
         ConsoleSession session = TerminalCache.getOrCreateSession(level, pos).session();
 
-        Optional<Job> foundJob = session.getDevice().getLastJob();
+        Optional<Job> foundJob = session.getDevice().getForegroundJob();
         if (foundJob.isPresent())
         {
             foundJob.get().handleSignal(signal);

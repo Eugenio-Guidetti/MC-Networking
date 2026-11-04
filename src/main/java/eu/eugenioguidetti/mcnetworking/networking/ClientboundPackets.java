@@ -43,7 +43,7 @@ public class ClientboundPackets
                                                      ClientPlayNetworking.@NonNull Context context)
     {
         // Invia l'output aggiornato alla WebUI
-        CliStreamManager.broadcast(payload);
+        CliStreamManager.broadcastCliHistory(payload);
 
         Minecraft client = Minecraft.getInstance();
 
@@ -58,6 +58,9 @@ public class ClientboundPackets
     public static void handleCommandCompletionS2CPayload(@NonNull CommandCompletionS2CPayload payload,
                                                          ClientPlayNetworking.@NonNull Context context)
     {
+        // Invia il comando completato alla WebUI
+        CliStreamManager.broadcastCompletion(payload);
+
         Minecraft client = Minecraft.getInstance();
 
         if (client.gui.screen() instanceof TerminalScreen terminalScreen)

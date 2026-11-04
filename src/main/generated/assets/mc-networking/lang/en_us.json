@@ -110,5 +110,6 @@
   "tooltip.mcnetworking.cable": "§7§nRight click§r§7 to select the first interface",
   "tooltip.mcnetworking.cable.pending_connection": "§7§nRight click§r§7 to select the second interface",
   "tooltip.mcnetworking.cable.pending_connection.cancel": "§7§nShift-Right click§r§7 to cancel connection",
-  "tooltip.mcnetworking.cable.pending_connection.first_interface": "§7First interface at §o%s, face: %s"
+  "tooltip.mcnetworking.cable.pending_connection.first_interface": "§7First interface at §o%s, face: %s",
+  "ui.mc-networking.open_in_webui": "Open in the WebUI"
 }

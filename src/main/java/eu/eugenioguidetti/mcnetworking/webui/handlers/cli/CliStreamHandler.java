@@ -50,11 +50,7 @@ public class CliStreamHandler implements HttpHandler
         {
             while (!Thread.currentThread().isInterrupted())
             {
-                String jsonUpdate = queue.take();
-
-                // Formato SSE: data: <json>\n\n
-                String sseMessage = "data: " + jsonUpdate + "\n\n";
-
+                String sseMessage = queue.take();
                 os.write(sseMessage.getBytes(StandardCharsets.UTF_8));
                 os.flush();
             }

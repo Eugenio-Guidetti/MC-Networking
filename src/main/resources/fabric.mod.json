@@ -12,6 +12,13 @@
     "sources": "https://github.com/Eugenio-Guidetti/MC-Networking",
     "issues": "https://github.com/eugenio-guidetti/mc-networking/issues"
   },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "WebUI": "http://localhost:14567"
+      }
+    }
+  },
   "license": "MIT",
   "icon": "assets/mc-networking/icon.png",
   "environment": "*",

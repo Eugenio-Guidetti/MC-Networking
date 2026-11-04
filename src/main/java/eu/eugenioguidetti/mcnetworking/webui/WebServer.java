@@ -10,13 +10,13 @@ import com.sun.net.httpserver.HttpServer;
 import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.webui.handlers.DeviceListHandler;
 import eu.eugenioguidetti.mcnetworking.webui.handlers.StaticResourceHandler;
-import eu.eugenioguidetti.mcnetworking.webui.handlers.cli.CliHandler;
-import eu.eugenioguidetti.mcnetworking.webui.handlers.cli.CliSendHandler;
-import eu.eugenioguidetti.mcnetworking.webui.handlers.cli.CliStreamHandler;
+import eu.eugenioguidetti.mcnetworking.webui.handlers.cli.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
+
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.WEBUI_PORT;
 
 
 /**
@@ -36,7 +36,7 @@ public class WebServer
             return;
         }
 
-        server = HttpServer.create(new InetSocketAddress("localhost", 14567), 0);
+        server = HttpServer.create(new InetSocketAddress("localhost", WEBUI_PORT), 0);
 
         server.createContext("/", (exchange ->
         {
@@ -48,6 +48,8 @@ public class WebServer
         server.createContext("/device/cli", new CliHandler());
         server.createContext("/device/cli/stream", new CliStreamHandler());
         server.createContext("/device/cli/send", new CliSendHandler());
+        server.createContext("/device/cli/signal", new CliSignalHandler());
+        server.createContext("/device/cli/complete", new CliCompleteHandler());
 
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
 

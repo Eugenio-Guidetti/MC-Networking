@@ -7,22 +7,29 @@ Data: 07/06/2026
  */
 
 import com.mojang.blaze3d.platform.InputConstants;
+import eu.eugenioguidetti.mcnetworking.MCNetworking;
 import eu.eugenioguidetti.mcnetworking.networking.packet.*;
 import eu.eugenioguidetti.mcnetworking.simulation.NetworkReceiver;
 import eu.eugenioguidetti.mcnetworking.terminal.TerminalSignal;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.NonNull;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+
+import static eu.eugenioguidetti.mcnetworking.GlobalConstants.WEBUI_PORT;
 
 /**
  *
@@ -43,11 +50,19 @@ public class TerminalScreen extends Screen
     private String draftCommand = "";
     private int scrollOffset = 0;
 
+    private final String webUIUrl;
+    private Button webUIButton;
+
     public TerminalScreen(@NonNull OpenTerminalS2CPayload payload)
     {
         super(Component.literal("Terminal"));
 
         this.pos = payload.pos();
+        this.webUIUrl = String.format("http://localhost:%d/device/cli/?x=%d&y=%d&z=%d",
+                                      WEBUI_PORT,
+                                      pos.pos().getX(),
+                                      pos.pos().getY(),
+                                      pos.pos().getZ());
 
         if (payload.history().isEmpty())
         {
@@ -89,8 +104,15 @@ public class TerminalScreen extends Screen
         this.inputField.setMaxLength(256);
         this.inputField.setBordered(false);
         this.inputField.setTextColor(GREEN);
-
         this.addRenderableWidget(this.inputField);
+
+        MutableComponent webUIButtonText = Component.translatable("ui." + MCNetworking.MOD_ID + ".open_in_webui");
+        int webUIButtonWidth = this.font.width(webUIButtonText) + 8;
+        this.webUIButton = new Button.Builder(webUIButtonText, ConfirmLinkScreen.confirmLink(this, URI.create(webUIUrl), true))
+                .bounds(this.width - webUIButtonWidth - 12, 12, webUIButtonWidth, 20)
+                .build();
+        this.addRenderableWidget(webUIButton);
+
         this.setInitialFocus(this.inputField);
     }
 

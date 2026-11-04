@@ -84,76 +84,7 @@
 			<input type="text" id="cli-input" autofocus autocomplete="off">
 		</form>
 
-		<script>
-			// Recupera i parametri x, y, z dall'URL corrente della pagina
-			const params = new URLSearchParams(window.location.search);
-			const x = params.get("x");
-			const y = params.get("y");
-			const z = params.get("z");
-
-			const input = document.getElementById("cli-input");
-
-			if (x !== null && y !== null && z !== null) {
-				const cliPre = document.getElementById("cli-output");
-				const cliInputRow = document.getElementById("cli-input-row");
-				const cliPrompt = document.getElementById("cli-prompt");
-
-				const eventSource = new EventSource(`/device/cli/stream?x=${x}&y=${y}&z=${z}`);
-
-				eventSource.onmessage = function (event) {
-					// Decodifica il payload JSON ricevuto
-					const data = JSON.parse(event.data);
-
-					// Aggiornamento selettivo dei nodi DOM
-					cliPre.textContent = data.output;
-					cliInputRow.style.display = data.showPrompt ? "" : "none";
-					cliPrompt.textContent = data.prompt;
-
-					// Autoscroll verso il fondo
-					cliPre.scrollTop = cliPre.scrollHeight;
-
-					input.focus();
-				};
-
-				eventSource.onerror = function () {
-					console.warn("Connessione SSE persa. Riconnessione automatica in corso...");
-				};
-			}
-
-
-			// Seleziona automaticamente l'input field
-			input.focus();
-
-			document.addEventListener("click", () => {
-				const selectedText = window.getSelection().toString();
-				if (!selectedText) {
-					input.focus();
-				}
-			});
-
-			document.addEventListener("keydown", (event) => {
-				if (event.ctrlKey || event.metaKey || event.altKey) {
-					return;
-				}
-
-				if (document.activeElement !== input) {
-					input.focus();
-				}
-			});
-
-			function sendCommand(event) {
-				event.preventDefault();
-				const cmd = input.value;
-
-				fetch(`/device/cli/send?x=${x}&y=${y}&z=${z}`, {
-					method: "POST",
-					body: cmd
-				}).then(() => {
-					input.value = "";
-					input.focus();
-				});
-			}
-		</script>
+		<script src="/scripts/cli.js"></script>
 	</body>
 
 </html>

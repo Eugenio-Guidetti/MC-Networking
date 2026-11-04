@@ -67,6 +67,8 @@ public class ModEnglishLangProvider extends FabricLanguageProvider
         translationBuilder.add("itemGroup." + MCNetworking.MOD_ID + ".end_devices", "MCNetworking: End Devices");
         translationBuilder.add("itemGroup." + MCNetworking.MOD_ID + ".network_devices", "MCNetworking: Network Devices");
 
+        // --- UI ---
+        translationBuilder.add("ui." + MCNetworking.MOD_ID + ".open_in_webui", "Open in the WebUI");
 
         // --- CLI ---
         translationBuilder.add("mcnetworking.cli.welcome_message", "Welcome to MCNetworking OS\nType \"help\" to get started\n\n");
